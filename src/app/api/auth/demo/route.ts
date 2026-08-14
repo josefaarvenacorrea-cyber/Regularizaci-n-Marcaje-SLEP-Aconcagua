@@ -10,6 +10,14 @@ const DEMO_BASE = [
 ];
 
 export async function GET() {
+  // Panel de accesos de prueba: solo tiene sentido para desarrollo/demo. En
+  // producción, además de no ser útil para las jefaturas reales, expondría
+  // sin autenticación los correos institucionales y la cantidad de casos de
+  // cada jefatura a cualquiera que abra la pantalla de login.
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ demoLogins: [] });
+  }
+
   const [dot, todos, config] = await Promise.all([loadDotacion(), allCasos(), getConfig()]);
   const conteo = new Map<string, number>();
   for (const c of todos) {
