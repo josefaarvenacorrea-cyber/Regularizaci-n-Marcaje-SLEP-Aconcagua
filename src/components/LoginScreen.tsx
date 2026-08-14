@@ -22,8 +22,20 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
     setError(err || '');
   }
 
+  const hayDemo = demoLogins.length > 0;
+
   return (
-    <main style={{ maxWidth: 940, margin: '0 auto', padding: '70px 32px 90px', display: 'grid', gridTemplateColumns: '1.05fr .95fr', gap: 44, alignItems: 'start' }}>
+    <main
+      style={{
+        maxWidth: hayDemo ? 940 : 560,
+        margin: '0 auto',
+        padding: '70px 32px 90px',
+        display: 'grid',
+        gridTemplateColumns: hayDemo ? '1.05fr .95fr' : '1fr',
+        gap: 44,
+        alignItems: 'start',
+      }}
+    >
       <div>
         <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Acceso jefaturas</h6>
         <h1 style={{ fontSize: 40, margin: '0 0 12px', maxWidth: '22ch' }}>Justifique las inconsistencias de marcaje de su equipo</h1>
@@ -50,27 +62,29 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
         </div>
       </div>
 
-      <div className="blueprint" style={{ padding: 20, background: 'var(--color-neutral-100)' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
-        <h6 style={{ margin: '0 0 3px' }}>Accesos de prueba</h6>
-        <p className="text-muted" style={{ fontSize: 11.5, margin: '0 0 12px' }}>Toque un correo para entrar con ese perfil.</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--color-divider)' }}>
-          {demoLogins.map((d) => (
-            <button
-              key={d.correo}
-              type="button"
-              onClick={() => entrar(d.correo)}
-              style={{ textAlign: 'left', border: 0, background: 'var(--color-bg)', padding: '9px 11px', cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 12.5, fontWeight: 500 }}>{d.nombre}</span>
-                <span className={`tag ${d.rol === 'admin' ? 'tag-accent' : 'tag-outline'}`} style={{ fontSize: 10 }}>{d.etiqueta}</span>
-              </div>
-              <div className="text-muted" style={{ fontSize: 11 }}>{d.correo}</div>
-            </button>
-          ))}
+      {hayDemo && (
+        <div className="blueprint" style={{ padding: 20, background: 'var(--color-neutral-100)' }}>
+          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+          <h6 style={{ margin: '0 0 3px' }}>Accesos de prueba</h6>
+          <p className="text-muted" style={{ fontSize: 11.5, margin: '0 0 12px' }}>Toque un correo para entrar con ese perfil.</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--color-divider)' }}>
+            {demoLogins.map((d) => (
+              <button
+                key={d.correo}
+                type="button"
+                onClick={() => entrar(d.correo)}
+                style={{ textAlign: 'left', border: 0, background: 'var(--color-bg)', padding: '9px 11px', cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{d.nombre}</span>
+                  <span className={`tag ${d.rol === 'admin' ? 'tag-accent' : 'tag-outline'}`} style={{ fontSize: 10 }}>{d.etiqueta}</span>
+                </div>
+                <div className="text-muted" style={{ fontSize: 11 }}>{d.correo}</div>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }
