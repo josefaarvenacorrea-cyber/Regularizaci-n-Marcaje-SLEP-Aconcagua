@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
 import type { Session } from '@/lib/auth';
 import type { Caso } from '@/lib/casos';
-import { completa as calcCompleta, key as normKey } from '@/lib/reglas';
+import { key as normKey } from '@/lib/reglas';
 import { LoginScreen } from './LoginScreen';
 import { Header, type TabDef } from './Header';
 import { CargaBase } from './CargaBase';
@@ -238,9 +238,7 @@ export function Workspace() {
   }, [casos, filtroJefaturaActivo]);
 
   const total = casos.length;
-  const resueltas = casos.filter((c) =>
-    calcCompleta({ tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio }, horaSoloOlvido)
-  ).length;
+  const resueltas = casos.filter((c) => c.confirmada).length;
   const pendientes = total - resueltas;
   const pct = total ? Math.round((resueltas / total) * 100) : 0;
 
@@ -405,6 +403,8 @@ function mapPatchOptimista(patch: Record<string, unknown>): Partial<Caso> {
     out.entradaReal = '';
     out.salidaReal = '';
     out.obs = '';
+    out.confirmada = false;
   }
+  if (patch.confirmar) out.confirmada = true;
   return out;
 }
