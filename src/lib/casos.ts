@@ -34,6 +34,7 @@ export type IncRow = {
   obs: string;
   respaldo: string;
   updated_at: string;
+  confirmada: boolean;
 };
 
 export type Caso = {
@@ -56,6 +57,7 @@ export type Caso = {
   obs: string;
   respaldo: string;
   completa: boolean;
+  confirmada: boolean;
 };
 
 export async function getConfig(): Promise<Record<string, string>> {
@@ -123,6 +125,7 @@ function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: b
     obs: r.obs,
     respaldo: r.respaldo,
     completa: false,
+    confirmada: !!r.confirmada,
   };
   c.completa = calcCompleta(
     { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio },
