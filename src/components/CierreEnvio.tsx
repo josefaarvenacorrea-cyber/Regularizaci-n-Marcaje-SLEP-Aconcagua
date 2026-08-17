@@ -53,7 +53,7 @@ export function CierreEnvio({
 }) {
   const displays = useMemo(() => casos.map((c) => ({ c, d: casoDisplay(c, horaSoloOlvido, esAdmin) })), [casos, horaSoloOlvido, esAdmin]);
   const total = casos.length;
-  const listos = displays.filter((x) => x.d.completa);
+  const listos = displays.filter((x) => x.d.confirmada);
   const resueltas = listos.length;
   const pendientes = total - resueltas;
   const personas = new Set(casos.map((c) => c.rut)).size;
