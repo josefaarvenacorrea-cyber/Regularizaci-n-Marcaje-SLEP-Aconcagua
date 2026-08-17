@@ -11,10 +11,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
 const PROJECT_DIR = path.join(ROOT, '..', 'project');
 
-const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-if (!connectionString) {
+function resolveConnectionString() {
+  const directo = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (directo) return directo;
+  const candidatos = Object.keys(process.env).filter((k) => /(_|^)(DATABASE|POSTGRES)_URL$/.test(k));
+  const pooled = candidatos.find((k) => !/UNPOOLED|NO_SSL|PRISMA|NON_POOLING/.test(k));
+  const elegido = pooled || candidatos[0];
+  if (elegido) return process.env[elegido];
   throw new Error('Falta POSTGRES_URL (o DATABASE_URL) — define .env.local o exporta la variable antes de correr la semilla.');
 }
+const connectionString = resolveConnectionString();
 const pool = new Pool({
   connectionString,
   ssl: /localhost|127\.0\.0\.1/.test(connectionString) ? false : { rejectUnauthorized: false },
@@ -56,8 +62,10 @@ async function main() {
       periodo TEXT NOT NULL DEFAULT '', jefatura TEXT, identificado INTEGER NOT NULL DEFAULT 0,
       motivo TEXT NOT NULL DEFAULT '', entrada_real TEXT NOT NULL DEFAULT '',
       salida_real TEXT NOT NULL DEFAULT '', obs TEXT NOT NULL DEFAULT '',
-      respaldo TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT ''
+      respaldo TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '',
+      confirmada BOOLEAN NOT NULL DEFAULT false
     );
+    ALTER TABLE inconsistencias ADD COLUMN IF NOT EXISTS confirmada BOOLEAN NOT NULL DEFAULT false;
     CREATE INDEX IF NOT EXISTS idx_inc_jefatura ON inconsistencias(jefatura);
     CREATE INDEX IF NOT EXISTS idx_inc_rut ON inconsistencias(rut);
 
@@ -124,7 +132,7 @@ async function main() {
       client.query('INSERT INTO config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [k, v]);
     await cfg('periodo', PERIODO);
     await cfg('plazoTexto', 'Viernes 14 de agosto');
-    await cfg('correosAdmin', 'gestiondepersonas@slepaconcagua.gob.cl');
+    await cfg('correosAdmin', 'administracion.personas@slepaconcagua.gob.cl');
     await cfg('rutaRepositorio', String.raw`\\slepaconcagua\GestionDePersonas\Asistencia\2026\Regularizaciones`);
     await cfg('horaSoloOlvido', 'false');
     await cfg('cascada', 'false');
