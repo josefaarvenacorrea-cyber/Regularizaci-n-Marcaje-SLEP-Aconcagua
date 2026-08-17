@@ -15,7 +15,7 @@ export async function GET() {
     const k = key(c.jefatura);
     const e = conteo.get(k) || { casos: 0, res: 0 };
     e.casos++;
-    if (c.completa) e.res++;
+    if (c.confirmada) e.res++;
     conteo.set(k, e);
   }
 
