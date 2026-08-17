@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Caso } from '@/lib/casos';
 import { casoDisplay } from '@/lib/display';
-import { completa as calcCompleta, motivosDe } from '@/lib/reglas';
+import { motivosDe } from '@/lib/reglas';
 
 function vecinoPendiente(casos: Caso[], id: string | null, paso: number, esCompleta: (c: Caso) => boolean): string | null {
   const i = id ? casos.findIndex((c) => c.id === id) : -1;
@@ -34,12 +34,17 @@ export function RevisionRapida({
   irEnvio: () => void;
 }) {
   const [obsDraft, setObsDraft] = useState<Record<string, string>>({});
-  const esCompleta = (c: Caso) => calcCompleta({ tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio }, horaSoloOlvido);
-  const pend = useMemo(() => casos.filter((c) => !esCompleta(c)), [casos, horaSoloOlvido]); // eslint-disable-line react-hooks/exhaustive-deps
+  const esPendiente = (c: Caso) => !c.confirmada;
+  const pend = useMemo(() => casos.filter(esPendiente), [casos]);
   const actual = (cursorId ? casos.find((c) => c.id === cursorId) : null) || pend[0];
   const posPend = actual ? pend.findIndex((c) => c.id === actual.id) : -1;
 
-  const ir = (paso: number) => actual && setCursorId(vecinoPendiente(casos, actual.id, paso, esCompleta));
+  const ir = (paso: number) => actual && setCursorId(vecinoPendiente(casos, actual.id, paso, esPendiente));
+  const guardarYSiguiente = () => {
+    if (!actual) return;
+    onUpdate(actual.id, { confirmar: true });
+    setCursorId(vecinoPendiente(casos, actual.id, 1, esPendiente));
+  };
 
   if (!actual) {
     return (
@@ -47,7 +52,7 @@ export function RevisionRapida({
         <div className="blueprint" style={{ padding: '56px 28px', textAlign: 'center', background: 'var(--color-neutral-100)' }}>
           <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h2 style={{ margin: '0 0 6px' }}>No quedan pendientes</h2>
-          <p className="text-muted" style={{ fontSize: 14, margin: '0 0 18px' }}>Todas las inconsistencias de su equipo tienen motivo asignado.</p>
+          <p className="text-muted" style={{ fontSize: 14, margin: '0 0 18px' }}>Todas las inconsistencias de su equipo fueron enviadas.</p>
           <button type="button" className="btn btn-primary" onClick={irEnvio}>Revisar y exportar</button>
         </div>
       </main>
@@ -133,14 +138,14 @@ export function RevisionRapida({
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20 }}>
           <button type="button" className="btn btn-secondary" onClick={() => ir(-1)}>Anterior</button>
-          <button type="button" className="btn btn-primary" disabled={!d.completa} onClick={() => ir(1)}>Guardar y siguiente</button>
+          <button type="button" className="btn btn-primary" disabled={!d.completa} onClick={guardarYSiguiente}>Guardar y siguiente</button>
           <button type="button" className="btn btn-ghost" onClick={() => ir(1)}>Saltar por ahora</button>
           <div style={{ flex: 1 }} />
           <button type="button" className="btn btn-ghost" onClick={() => onUpdate(actual.id, { toggleRespaldo: true })}>{d.labelRespaldo}</button>
         </div>
         {d.completa && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--color-accent-700)' }}>
-            Caso guardado como <strong>{d.estadoLabel}</strong>. Avance con «Guardar y siguiente» cuando quiera pasar al próximo pendiente.
+            Listo para enviar. Presione «Guardar y siguiente» para justificarlo y avisar al funcionario, y pasar al próximo pendiente.
           </div>
         )}
         {!d.completa && d.aviso && <div style={{ marginTop: 10, fontSize: 12, color: 'var(--color-accent-700)' }}>{d.aviso}</div>}
