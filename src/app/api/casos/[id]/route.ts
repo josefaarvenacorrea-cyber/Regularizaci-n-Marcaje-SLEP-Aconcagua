@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { execute } from '@/lib/db';
-import { casoVisiblePara, getCasoById, getCasoFormatted } from '@/lib/casos';
-import { motivosDe } from '@/lib/reglas';
+import { casoVisiblePara, getCasoById, getCasoFormatted, getConfig, getConfigBool, loadDotacion } from '@/lib/casos';
+import { completa as calcCompleta, key, motivosDe } from '@/lib/reglas';
+import { notificarJustificacion } from '@/lib/mailer';
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -14,6 +15,12 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
   const row = await getCasoById(id);
   if (!row) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 });
+
+  const horaSoloOlvido = await getConfigBool('horaSoloOlvido', false);
+  const completaAntes = calcCompleta(
+    { tipo: row.tipo, motivo: row.motivo, entradaReal: row.entrada_real, salidaReal: row.salida_real, obs: row.obs, entro: row.entro, salio: row.salio },
+    horaSoloOlvido
+  );
 
   const body = await request.json().catch(() => ({}));
   const now = new Date().toISOString();
@@ -51,5 +58,25 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   }
 
   const updated = await getCasoFormatted(id);
+
+  // Solo se notifica el momento en que el caso pasa a estar completo, no en
+  // cada edición posterior de un caso que ya lo estaba (evita spam si la
+  // jefatura solo corrige la observación después).
+  if (updated && !completaAntes && updated.completa) {
+    const [dot, config] = await Promise.all([loadDotacion(), getConfig()]);
+    const funcionario = dot.find((d) => d.rut === updated.rut);
+    const jefe = updated.jefatura ? dot.find((d) => key(d.nombre) === key(updated.jefatura!)) : undefined;
+    const adminCorreos = (config.correosAdmin || 'administracion.personas@slepaconcagua.gob.cl')
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean);
+    notificarJustificacion(updated, {
+      funcionarioCorreo: funcionario?.correo,
+      jefaturaCorreo: jefe?.correo,
+      jefaturaNombre: updated.jefatura || session.nombre,
+      adminCorreos,
+    }).catch(() => {});
+  }
+
   return NextResponse.json({ caso: updated });
 }
