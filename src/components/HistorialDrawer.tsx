@@ -5,7 +5,7 @@ import { diaSemana, fmtFecha, tagClass } from '@/lib/reglas';
 
 export function HistorialDrawer({ rut, items, onClose }: { rut: string; items: Caso[]; onClose: () => void }) {
   const primero = items[0];
-  const resueltas = items.filter((c) => !!c.completa).length;
+  const resueltas = items.filter((c) => !!c.confirmada).length;
   const tipoConteo = new Map<string, number>();
   for (const c of items) tipoConteo.set(c.tipo, (tipoConteo.get(c.tipo) || 0) + 1);
   const frecuente = [...tipoConteo.entries()].sort((a, b) => b[1] - a[1])[0];
