@@ -60,8 +60,10 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     labelObs: m && m.obs ? 'Observación (obligatoria para este motivo)' : 'Observación (opcional)',
     completa,
     noCompleta: !completa,
-    estadoLabel: completa ? 'Justificada' : c.motivo ? 'Incompleta' : 'Pendiente',
-    estadoClass: completa ? 'tag-accent' : 'tag-outline',
+    confirmada: c.confirmada,
+    listaParaEnviar: completa && !c.confirmada,
+    estadoLabel: c.confirmada ? 'Justificada' : completa ? 'Lista para enviar' : c.motivo ? 'Incompleta' : 'Pendiente',
+    estadoClass: c.confirmada ? 'tag-accent' : completa ? 'tag-neutral' : 'tag-outline',
     labelRespaldo: c.respaldo ? '📎 ' + c.respaldo : 'Adjuntar respaldo',
     aviso: !completa && c.motivo
       ? faltaMarca
