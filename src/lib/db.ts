@@ -1,11 +1,30 @@
 import { Pool, type PoolClient } from 'pg';
 
-const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-if (!connectionString) {
+// Vercel prefija las variables que genera la integración de Postgres con el
+// nombre que le hayas puesto al recurso de Storage (p. ej. "Almacenamiento"
+// → ALMACENAMIENTO_DATABASE_URL) en vez de crear una POSTGRES_URL/DATABASE_URL
+// simple. En vez de depender de que alguien copie ese valor a mano a una
+// variable con el nombre exacto (frágil: un solo error de tipeo o de guardado
+// y la app queda sin base de datos sin avisar hasta el primer request real),
+// se busca cualquier variable de entorno cuyo nombre termine en
+// _DATABASE_URL o _POSTGRES_URL, prefiriendo la versión "pooled" (sin
+// _UNPOOLED/_NO_SSL/_PRISMA/_NON_POOLING) por ser la adecuada para funciones
+// serverless.
+function resolveConnectionString(): string {
+  const directo = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (directo) return directo;
+
+  const candidatos = Object.keys(process.env).filter((k) => /(_|^)(DATABASE|POSTGRES)_URL$/.test(k));
+  const pooled = candidatos.find((k) => !/UNPOOLED|NO_SSL|PRISMA|NON_POOLING/.test(k));
+  const elegido = pooled || candidatos[0];
+  if (elegido) return process.env[elegido]!;
+
   throw new Error(
-    'Falta POSTGRES_URL (o DATABASE_URL): defínela en .env.local para desarrollo, o como variable de entorno del proyecto en Vercel (la agrega sola al conectar el storage de Postgres).'
+    'Falta POSTGRES_URL (o DATABASE_URL, o alguna variable *_DATABASE_URL/*_POSTGRES_URL): defínela en .env.local para desarrollo, o conecta el storage de Postgres al proyecto en Vercel.'
   );
 }
+
+const connectionString = resolveConnectionString();
 
 declare global {
   var __pgPool: Pool | undefined;
@@ -16,7 +35,7 @@ function getPool(): Pool {
   if (!global.__pgPool) {
     global.__pgPool = new Pool({
       connectionString,
-      ssl: /localhost|127\.0\.0\.1/.test(connectionString!) ? false : { rejectUnauthorized: false },
+      ssl: /localhost|127\.0\.0\.1/.test(connectionString) ? false : { rejectUnauthorized: false },
     });
   }
   return global.__pgPool;
