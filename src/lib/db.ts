@@ -75,8 +75,10 @@ async function ensureSchema(pool: Pool) {
       salida_real TEXT NOT NULL DEFAULT '',
       obs TEXT NOT NULL DEFAULT '',
       respaldo TEXT NOT NULL DEFAULT '',
-      updated_at TEXT NOT NULL DEFAULT ''
+      updated_at TEXT NOT NULL DEFAULT '',
+      confirmada BOOLEAN NOT NULL DEFAULT false
     );
+    ALTER TABLE inconsistencias ADD COLUMN IF NOT EXISTS confirmada BOOLEAN NOT NULL DEFAULT false;
     CREATE INDEX IF NOT EXISTS idx_inc_jefatura ON inconsistencias(jefatura);
     CREATE INDEX IF NOT EXISTS idx_inc_rut ON inconsistencias(rut);
 
