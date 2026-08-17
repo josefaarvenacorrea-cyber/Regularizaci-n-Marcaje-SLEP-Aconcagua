@@ -17,20 +17,38 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (!row) return NextResponse.json({ error: 'Caso no encontrado' }, { status: 404 });
 
   const horaSoloOlvido = await getConfigBool('horaSoloOlvido', false);
-  const completaAntes = calcCompleta(
-    { tipo: row.tipo, motivo: row.motivo, entradaReal: row.entrada_real, salidaReal: row.salida_real, obs: row.obs, entro: row.entro, salio: row.salio },
-    horaSoloOlvido
-  );
+  const confirmadaAntes = row.confirmada;
 
   const body = await request.json().catch(() => ({}));
   const now = new Date().toISOString();
 
   if (body.limpiar) {
-    await execute(`UPDATE inconsistencias SET motivo='', entrada_real='', salida_real='', obs='', updated_at=$1 WHERE id=$2`, [now, id]);
+    await execute(
+      `UPDATE inconsistencias SET motivo='', entrada_real='', salida_real='', obs='', confirmada=false, updated_at=$1 WHERE id=$2`,
+      [now, id]
+    );
   } else if (body.toggleRespaldo) {
     const nuevo = row.respaldo ? '' : 'respaldo-' + row.rut.replace(/\./g, '') + '.pdf';
     await execute(`UPDATE inconsistencias SET respaldo=$1, updated_at=$2 WHERE id=$3`, [nuevo, now, id]);
+  } else if (body.confirmar) {
+    // El botón "Enviar": recién acá se considera el caso oficialmente
+    // justificado (dispara el correo y desaparece de la vista por defecto).
+    // Se revalida `completa` en el servidor — el botón del cliente ya lo
+    // exige, pero no hay que confiar en eso.
+    const completaAhora = calcCompleta(
+      { tipo: row.tipo, motivo: row.motivo, entradaReal: row.entrada_real, salidaReal: row.salida_real, obs: row.obs, entro: row.entro, salio: row.salio },
+      horaSoloOlvido
+    );
+    if (!completaAhora) {
+      return NextResponse.json({ error: 'Faltan datos para enviar este caso.' }, { status: 400 });
+    }
+    await execute(`UPDATE inconsistencias SET confirmada=true, updated_at=$1 WHERE id=$2`, [now, id]);
   } else {
+    // Un caso ya enviado no se edita a medio camino: hay que deshacerlo
+    // primero (lo que también avisa que la notificación ya salió).
+    if (row.confirmada) {
+      return NextResponse.json({ error: 'Este caso ya fue enviado. Use «Deshacer» para editarlo de nuevo.' }, { status: 400 });
+    }
     const updates: Record<string, string> = {};
     if (typeof body.motivo === 'string') {
       const validos = motivosDe(row.tipo).map((m) => m.v);
@@ -59,10 +77,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 
   const updated = await getCasoFormatted(id);
 
-  // Solo se notifica el momento en que el caso pasa a estar completo, no en
-  // cada edición posterior de un caso que ya lo estaba (evita spam si la
-  // jefatura solo corrige la observación después).
-  if (updated && !completaAntes && updated.completa) {
+  // Solo se notifica el momento en que el caso pasa a "enviado" (confirmada),
+  // no en cada edición de campos ni al quedar completo sin enviar todavía.
+  if (updated && !confirmadaAntes && updated.confirmada) {
     const [dot, config] = await Promise.all([loadDotacion(), getConfig()]);
     const funcionario = dot.find((d) => d.rut === updated.rut);
     const jefe = updated.jefatura ? dot.find((d) => key(d.nombre) === key(updated.jefatura!)) : undefined;
