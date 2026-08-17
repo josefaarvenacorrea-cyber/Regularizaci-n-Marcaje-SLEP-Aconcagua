@@ -27,10 +27,12 @@ export function Bandeja({
   const [filtroFunc, setFiltroFunc] = useState('Todos');
   const [filtroTipo, setFiltroTipo] = useState('Todos');
   const [soloPend, setSoloPend] = useState(false);
+  const [verEnviados, setVerEnviados] = useState(false);
   const [obsDraft, setObsDraft] = useState<Record<string, string>>({});
 
   const total = casos.length;
   const displays = useMemo(() => casos.map((c) => ({ c, d: casoDisplay(c, horaSoloOlvido, esAdmin) })), [casos, horaSoloOlvido, esAdmin]);
+  const enviados = displays.filter((x) => x.d.confirmada).length;
   const resueltas = displays.filter((x) => x.d.completa).length;
   const pendientes = total - resueltas;
 
@@ -39,6 +41,7 @@ export function Bandeja({
 
   const q = buscar.trim().toLowerCase();
   const visibles = displays.filter(({ c, d }) => {
+    if (!verEnviados && d.confirmada) return false;
     if (filtroTipo !== 'Todos' && c.tipo !== filtroTipo) return false;
     if (filtroFunc !== 'Todos' && c.rut !== filtroFunc) return false;
     if (soloPend && d.completa) return false;
@@ -79,6 +82,9 @@ export function Bandeja({
           </div>
         </div>
         <div style={{ flex: 1 }} />
+        <button type="button" className="btn btn-secondary" onClick={() => setVerEnviados(!verEnviados)}>
+          {verEnviados ? 'Ocultar enviados' : 'Ver enviados (' + enviados + ')'}
+        </button>
         <button type="button" className="btn btn-secondary" onClick={() => setSoloPend(!soloPend)}>{soloPend ? 'Ver todas' : 'Ver solo pendientes'}</button>
       </div>
 
@@ -116,6 +122,7 @@ export function Bandeja({
                     className="input"
                     style={{ fontSize: 13, minHeight: 32 }}
                     value={d.motivo}
+                    disabled={d.confirmada}
                     onChange={(e) => onUpdate(c.id, { motivo: e.target.value })}
                   >
                     {d.motivos.map((m) => (
@@ -129,13 +136,13 @@ export function Bandeja({
                       {d.pideEntrada && (
                         <label style={{ flex: 1, fontSize: 10 }} className="text-muted">
                           Entrada
-                          <input className="input" type="time" style={{ minHeight: 32, fontSize: 13, borderColor: d.bordeEntrada ? 'var(--color-accent)' : 'var(--color-divider)' }} value={d.entradaReal} onChange={(e) => onUpdate(c.id, { entradaReal: e.target.value })} />
+                          <input className="input" type="time" disabled={d.confirmada} style={{ minHeight: 32, fontSize: 13, borderColor: d.bordeEntrada ? 'var(--color-accent)' : 'var(--color-divider)' }} value={d.entradaReal} onChange={(e) => onUpdate(c.id, { entradaReal: e.target.value })} />
                         </label>
                       )}
                       {d.pideSalida && (
                         <label style={{ flex: 1, fontSize: 10 }} className="text-muted">
                           Salida
-                          <input className="input" type="time" style={{ minHeight: 32, fontSize: 13, borderColor: d.bordeSalida ? 'var(--color-accent)' : 'var(--color-divider)' }} value={d.salidaReal} onChange={(e) => onUpdate(c.id, { salidaReal: e.target.value })} />
+                          <input className="input" type="time" disabled={d.confirmada} style={{ minHeight: 32, fontSize: 13, borderColor: d.bordeSalida ? 'var(--color-accent)' : 'var(--color-divider)' }} value={d.salidaReal} onChange={(e) => onUpdate(c.id, { salidaReal: e.target.value })} />
                         </label>
                       )}
                     </div>
@@ -147,16 +154,20 @@ export function Bandeja({
                   <input
                     className="input"
                     type="text"
+                    disabled={d.confirmada}
                     style={{ minHeight: 32, fontSize: 13, borderColor: d.bordeObs ? 'var(--color-accent)' : 'var(--color-divider)' }}
                     placeholder={d.placeholderObs}
                     value={obsDraft[c.id] ?? d.obs}
                     onChange={(e) => setObsDraft((s) => ({ ...s, [c.id]: e.target.value }))}
                     onBlur={(e) => onUpdate(c.id, { obs: e.target.value })}
                   />
-                  <button type="button" className="btn btn-ghost" onClick={() => onUpdate(c.id, { toggleRespaldo: true })} style={{ fontSize: 11, fontFamily: 'var(--font-body)', marginTop: 3 }}>{d.labelRespaldo}</button>
+                  <button type="button" className="btn btn-ghost" disabled={d.confirmada} onClick={() => onUpdate(c.id, { toggleRespaldo: true })} style={{ fontSize: 11, fontFamily: 'var(--font-body)', marginTop: 3 }}>{d.labelRespaldo}</button>
                 </td>
                 <td style={{ padding: '7px 10px', verticalAlign: 'top' }}>
                   <span className={`tag ${d.estadoClass}`}>{d.estadoLabel}</span>
+                  {d.listaParaEnviar && (
+                    <div><button type="button" className="btn btn-primary" onClick={() => onUpdate(c.id, { confirmar: true })} style={{ fontSize: 11, padding: '4px 10px', marginTop: 4 }}>Enviar</button></div>
+                  )}
                   {d.completa && (
                     <div><button type="button" className="btn btn-ghost" onClick={() => onUpdate(c.id, { limpiar: true })} style={{ fontSize: 11, fontFamily: 'var(--font-body)', marginTop: 2 }}>Deshacer</button></div>
                   )}
