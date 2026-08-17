@@ -81,7 +81,7 @@ export async function clearSessionCookie() {
 
 async function adminCorreos(): Promise<string[]> {
   const cfg = await getConfig();
-  const raw = cfg.correosAdmin ?? 'gestiondepersonas@slepaconcagua.gob.cl';
+  const raw = cfg.correosAdmin ?? 'administracion.personas@slepaconcagua.gob.cl';
   return raw.split(',').map((c) => c.trim().toLowerCase());
 }
 
