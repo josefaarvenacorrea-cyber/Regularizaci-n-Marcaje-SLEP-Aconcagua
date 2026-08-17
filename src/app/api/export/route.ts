@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const fuente = consolidado ? await allCasos() : await misCasos(session, { verHuerfanos: session.rol === 'admin' && huerfanos });
-  const listos = fuente.filter((c) => c.completa);
+  const listos = fuente.filter((c) => c.confirmada);
   if (!listos.length) {
     return NextResponse.json({ error: 'No hay inconsistencias regularizadas para exportar.' }, { status: 400 });
   }
