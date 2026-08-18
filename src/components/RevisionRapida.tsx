@@ -4,16 +4,17 @@ import { useMemo, useState } from 'react';
 import type { Caso } from '@/lib/casos';
 import { casoDisplay } from '@/lib/display';
 import { motivosDe } from '@/lib/reglas';
+import { RespaldoAdjuntos } from './RespaldoAdjuntos';
 
-function vecinoPendiente(casos: Caso[], id: string | null, paso: number, esCompleta: (c: Caso) => boolean): string | null {
+function vecinoPendiente(casos: Caso[], id: string | null, paso: number, esPendiente: (c: Caso) => boolean): string | null {
   const i = id ? casos.findIndex((c) => c.id === id) : -1;
   if (i < 0) {
-    const p = casos.find((c) => !esCompleta(c));
+    const p = casos.find(esPendiente);
     return p ? p.id : null;
   }
   for (let k = 1; k <= casos.length; k++) {
     const j = (i + paso * k + casos.length * 2) % casos.length;
-    if (!esCompleta(casos[j])) return casos[j].id;
+    if (esPendiente(casos[j])) return casos[j].id;
   }
   return null;
 }
@@ -141,7 +142,7 @@ export function RevisionRapida({
           <button type="button" className="btn btn-primary" disabled={!d.completa} onClick={guardarYSiguiente}>Guardar y siguiente</button>
           <button type="button" className="btn btn-ghost" onClick={() => ir(1)}>Saltar por ahora</button>
           <div style={{ flex: 1 }} />
-          <button type="button" className="btn btn-ghost" onClick={() => onUpdate(actual.id, { toggleRespaldo: true })}>{d.labelRespaldo}</button>
+          <RespaldoAdjuntos key={actual.id} casoId={actual.id} disabled={d.confirmada} countInicial={d.respaldos} />
         </div>
         {d.completa && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--color-accent-700)' }}>
