@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Caso } from '@/lib/casos';
 import { casoDisplay } from '@/lib/display';
+import { RespaldoAdjuntos } from './RespaldoAdjuntos';
 
 export function Bandeja({
   casos,
@@ -161,7 +162,9 @@ export function Bandeja({
                     onChange={(e) => setObsDraft((s) => ({ ...s, [c.id]: e.target.value }))}
                     onBlur={(e) => onUpdate(c.id, { obs: e.target.value })}
                   />
-                  <button type="button" className="btn btn-ghost" disabled={d.confirmada} onClick={() => onUpdate(c.id, { toggleRespaldo: true })} style={{ fontSize: 11, fontFamily: 'var(--font-body)', marginTop: 3 }}>{d.labelRespaldo}</button>
+                  <div style={{ marginTop: 3 }}>
+                    <RespaldoAdjuntos casoId={c.id} disabled={d.confirmada} countInicial={d.respaldos} compact />
+                  </div>
                 </td>
                 <td style={{ padding: '7px 10px', verticalAlign: 'top' }}>
                   <span className={`tag ${d.estadoClass}`}>{d.estadoLabel}</span>
