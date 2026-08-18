@@ -82,6 +82,18 @@ async function ensureSchema(pool: Pool) {
     CREATE INDEX IF NOT EXISTS idx_inc_jefatura ON inconsistencias(jefatura);
     CREATE INDEX IF NOT EXISTS idx_inc_rut ON inconsistencias(rut);
 
+    CREATE TABLE IF NOT EXISTS respaldos (
+      id SERIAL PRIMARY KEY,
+      caso_id TEXT NOT NULL REFERENCES inconsistencias(id) ON DELETE CASCADE,
+      nombre_archivo TEXT NOT NULL,
+      mimetype TEXT NOT NULL DEFAULT '',
+      tamano INTEGER NOT NULL DEFAULT 0,
+      contenido BYTEA NOT NULL,
+      subido_por TEXT NOT NULL DEFAULT '',
+      creado_en TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_respaldos_caso ON respaldos(caso_id);
+
     CREATE TABLE IF NOT EXISTS archivos_generados (
       id SERIAL PRIMARY KEY,
       archivo TEXT NOT NULL,
