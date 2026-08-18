@@ -47,7 +47,7 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     obs: c.obs,
     entradaReal: c.entradaReal,
     salidaReal: c.salidaReal,
-    respaldo: c.respaldo,
+    respaldos: c.respaldos,
     horaHabilitada: hab,
     horaBloqueada: !!m && !hab,
     pideEntrada: hab && p.e,
@@ -64,7 +64,7 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     listaParaEnviar: completa && !c.confirmada,
     estadoLabel: c.confirmada ? 'Justificada' : completa ? 'Lista para enviar' : c.motivo ? 'Incompleta' : 'Pendiente',
     estadoClass: c.confirmada ? 'tag-accent' : completa ? 'tag-neutral' : 'tag-outline',
-    labelRespaldo: c.respaldo ? '📎 ' + c.respaldo : 'Adjuntar respaldo',
+    labelRespaldo: c.respaldos > 0 ? '📎 ' + c.respaldos + (c.respaldos === 1 ? ' archivo' : ' archivos') : 'Adjuntar respaldo',
     aviso: !completa && c.motivo
       ? faltaMarca
         ? 'Este motivo no es válido sin una marca de entrada real: no puede usarse cuando no hay ninguna marca registrada.'
@@ -74,5 +74,8 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
       : '',
   };
 }
+
+export type CasoDisplay = ReturnType<typeof casoDisplay>;
+
 
 export type CasoDisplay = ReturnType<typeof casoDisplay>;
