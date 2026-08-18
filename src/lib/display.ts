@@ -76,6 +76,3 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
 }
 
 export type CasoDisplay = ReturnType<typeof casoDisplay>;
-
-
-export type CasoDisplay = ReturnType<typeof casoDisplay>;
