@@ -13,6 +13,7 @@ import { Bandeja } from './Bandeja';
 import { RevisionRapida } from './RevisionRapida';
 import { CierreEnvio, type RegistroEntry } from './CierreEnvio';
 import { HistorialDrawer } from './HistorialDrawer';
+import { RespaldosAdmin } from './RespaldosAdmin';
 
 type Resumen = {
   jefaturas: JefaturaResumen[];
@@ -248,6 +249,7 @@ export function Workspace() {
         { key: 'carga', label: 'Cargar base' },
         { key: 'panel', label: 'Avance por jefatura' },
         { key: 'bandeja', label: 'Todos los casos', badge: total ? String(total) : '' },
+        { key: 'respaldos', label: 'Respaldos' },
         { key: 'envio', label: 'Excel y repositorio' },
       ];
     }
@@ -355,6 +357,8 @@ export function Workspace() {
           irEnvio={() => setVista('envio')}
         />
       )}
+
+      {esAdmin && vista === 'respaldos' && <RespaldosAdmin />}
 
       {vista === 'envio' && (
         <CierreEnvio
