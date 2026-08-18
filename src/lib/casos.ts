@@ -37,6 +37,16 @@ export type IncRow = {
   confirmada: boolean;
 };
 
+export type RespaldoMeta = {
+  id: number;
+  casoId: string;
+  nombreArchivo: string;
+  mimetype: string;
+  tamano: number;
+  subidoPor: string;
+  creadoEn: string;
+};
+
 export type Caso = {
   id: string;
   rut: string;
@@ -55,7 +65,7 @@ export type Caso = {
   entradaReal: string;
   salidaReal: string;
   obs: string;
-  respaldo: string;
+  respaldos: number;
   completa: boolean;
   confirmada: boolean;
 };
@@ -103,7 +113,7 @@ function cadena(jer: Map<string, string | null>, k: string): string[] {
   return out;
 }
 
-function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: boolean): Caso {
+function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: boolean, respaldos = 0): Caso {
   const d = dotByRut.get(r.rut);
   const c: Caso = {
     id: r.id,
@@ -123,7 +133,7 @@ function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: b
     entradaReal: r.entrada_real,
     salidaReal: r.salida_real,
     obs: r.obs,
-    respaldo: r.respaldo,
+    respaldos,
     completa: false,
     confirmada: !!r.confirmada,
   };
@@ -134,14 +144,20 @@ function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: b
   return c;
 }
 
+async function respaldoCounts(): Promise<Map<string, number>> {
+  const rows = await query<{ caso_id: string; n: string }>('SELECT caso_id, COUNT(*)::text AS n FROM respaldos GROUP BY caso_id');
+  return new Map(rows.map((r) => [r.caso_id, parseInt(r.n, 10)]));
+}
+
 export async function allCasos(): Promise<Caso[]> {
-  const [rows, dot, horaSoloOlvido] = await Promise.all([
+  const [rows, dot, horaSoloOlvido, respCounts] = await Promise.all([
     query<IncRow>('SELECT * FROM inconsistencias'),
     loadDotacion(),
     getConfigBool('horaSoloOlvido', false),
+    respaldoCounts(),
   ]);
   const dotByRut = new Map(dot.map((d) => [d.rut, d]));
-  return rows.map((r) => toCaso(r, dotByRut, horaSoloOlvido));
+  return rows.map((r) => toCaso(r, dotByRut, horaSoloOlvido, respCounts.get(r.id) || 0));
 }
 
 // Casos visibles para la sesión actual: equipo de la jefatura (directo, o en
@@ -169,9 +185,13 @@ export async function getCasoById(id: string): Promise<IncRow | undefined> {
 export async function getCasoFormatted(id: string): Promise<Caso | undefined> {
   const row = await getCasoById(id);
   if (!row) return undefined;
-  const [dot, horaSoloOlvido] = await Promise.all([loadDotacion(), getConfigBool('horaSoloOlvido', false)]);
+  const [dot, horaSoloOlvido, n] = await Promise.all([
+    loadDotacion(),
+    getConfigBool('horaSoloOlvido', false),
+    queryOne<{ n: string }>('SELECT COUNT(*)::text AS n FROM respaldos WHERE caso_id = $1', [id]),
+  ]);
   const dotByRut = new Map(dot.map((d) => [d.rut, d]));
-  return toCaso(row, dotByRut, horaSoloOlvido);
+  return toCaso(row, dotByRut, horaSoloOlvido, n ? parseInt(n.n, 10) : 0);
 }
 
 // Verifica que el caso `id` esté dentro del alcance visible de la sesión
@@ -340,6 +360,122 @@ export async function reemplazarDotacion(
 
   const nombresJefes = new Set(registros.map((d) => d.jefatura).filter((j) => j && j !== '-'));
   return { funcionarios: registros.length, jefaturas: nombresJefes.size, casosRecalculados };
+}
+
+type RespaldoRow = {
+  id: number;
+  caso_id: string;
+  nombre_archivo: string;
+  mimetype: string;
+  tamano: number;
+  subido_por: string;
+  creado_en: string;
+};
+
+function toRespaldoMeta(r: RespaldoRow): RespaldoMeta {
+  return {
+    id: r.id,
+    casoId: r.caso_id,
+    nombreArchivo: r.nombre_archivo,
+    mimetype: r.mimetype,
+    tamano: r.tamano,
+    subidoPor: r.subido_por,
+    creadoEn: r.creado_en,
+  };
+}
+
+export async function listRespaldos(casoId: string): Promise<RespaldoMeta[]> {
+  const rows = await query<RespaldoRow>(
+    'SELECT id, caso_id, nombre_archivo, mimetype, tamano, subido_por, creado_en FROM respaldos WHERE caso_id = $1 ORDER BY id',
+    [casoId]
+  );
+  return rows.map(toRespaldoMeta);
+}
+
+export async function insertRespaldo(
+  casoId: string,
+  nombreArchivo: string,
+  mimetype: string,
+  contenido: Buffer,
+  subidoPor: string
+): Promise<RespaldoMeta> {
+  const now = new Date().toISOString();
+  const row = await queryOne<RespaldoRow>(
+    `INSERT INTO respaldos (caso_id, nombre_archivo, mimetype, tamano, contenido, subido_por, creado_en)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     RETURNING id, caso_id, nombre_archivo, mimetype, tamano, subido_por, creado_en`,
+    [casoId, nombreArchivo, mimetype, contenido.length, contenido, subidoPor, now]
+  );
+  return toRespaldoMeta(row!);
+}
+
+export async function getRespaldoContenido(
+  id: number
+): Promise<{ casoId: string; nombreArchivo: string; mimetype: string; contenido: Buffer } | undefined> {
+  const row = await queryOne<{ caso_id: string; nombre_archivo: string; mimetype: string; contenido: Buffer }>(
+    'SELECT caso_id, nombre_archivo, mimetype, contenido FROM respaldos WHERE id = $1',
+    [id]
+  );
+  if (!row) return undefined;
+  return { casoId: row.caso_id, nombreArchivo: row.nombre_archivo, mimetype: row.mimetype, contenido: row.contenido };
+}
+
+// Para poder autorizar un DELETE antes de tocar el archivo (misma regla que
+// una descarga: hay que saber a qué caso pertenece para validar visibilidad).
+export async function getRespaldoCasoId(id: number): Promise<string | undefined> {
+  const row = await queryOne<{ caso_id: string }>('SELECT caso_id FROM respaldos WHERE id = $1', [id]);
+  return row?.caso_id;
+}
+
+export async function deleteRespaldo(id: number): Promise<boolean> {
+  const n = await execute('DELETE FROM respaldos WHERE id = $1', [id]);
+  return n > 0;
+}
+
+export type RespaldoCasoGrupo = {
+  casoId: string;
+  fecha: string;
+  tipo: string;
+  motivo: string;
+  archivos: RespaldoMeta[];
+};
+
+export type RespaldoPersonaGrupo = {
+  rut: string;
+  nombre: string;
+  casos: RespaldoCasoGrupo[];
+};
+
+// Vista "carpeta grande": todos los archivos adjuntos, agrupados por persona
+// y dentro de cada persona por caso — para que Gestión de Personas los pueda
+// recorrer igual que si fueran carpetas, sin depender de un disco compartido
+// (que esta app, al correr en Vercel, no tiene).
+export async function respaldosPorPersonaYCaso(): Promise<RespaldoPersonaGrupo[]> {
+  const rows = await query<
+    RespaldoRow & { rut: string; nombre: string; fecha: string; tipo: string; motivo: string }
+  >(
+    `SELECT r.id, r.caso_id, r.nombre_archivo, r.mimetype, r.tamano, r.subido_por, r.creado_en,
+            i.rut, i.nombre, i.fecha, i.tipo, i.motivo
+     FROM respaldos r
+     JOIN inconsistencias i ON i.id = r.caso_id
+     ORDER BY i.nombre, i.fecha, r.id`
+  );
+
+  const porPersona = new Map<string, RespaldoPersonaGrupo>();
+  for (const r of rows) {
+    let persona = porPersona.get(r.rut);
+    if (!persona) {
+      persona = { rut: r.rut, nombre: r.nombre, casos: [] };
+      porPersona.set(r.rut, persona);
+    }
+    let grupo = persona.casos.find((c) => c.casoId === r.caso_id);
+    if (!grupo) {
+      grupo = { casoId: r.caso_id, fecha: r.fecha, tipo: r.tipo, motivo: r.motivo, archivos: [] };
+      persona.casos.push(grupo);
+    }
+    grupo.archivos.push(toRespaldoMeta(r));
+  }
+  return [...porPersona.values()];
 }
 
 export { normRut };
