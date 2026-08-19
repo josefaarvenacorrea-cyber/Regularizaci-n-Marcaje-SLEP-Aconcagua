@@ -25,9 +25,12 @@ export async function GET() {
     const k = key(c.jefatura);
     conteo.set(k, (conteo.get(k) || 0) + 1);
   }
-  const admin = (config.correosAdmin || 'gestiondepersonas@slepaconcagua.gob.cl').split(',')[0].trim();
+  const admin = (config.correosAdmin || 'administracion.personas@slepaconcagua.gob.cl').split(',')[0].trim();
 
-  type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' };
+  const jefaturas = new Set(dot.map((d) => key(d.jefatura || '')).filter(Boolean));
+  const funcionario = dot.find((d) => d.correo && !jefaturas.has(key(d.nombre)));
+
+  type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
   const demoLogins: DemoLogin[] = [
     ...DEMO_BASE.map((nom): DemoLogin => {
       const f = dot.find((d) => key(d.nombre) === key(nom));
@@ -39,6 +42,9 @@ export async function GET() {
       };
     }),
     { nombre: 'Gestión de Personas (administración)', correo: admin, etiqueta: 'Admin', rol: 'admin' },
+    ...(funcionario
+      ? [{ nombre: funcionario.nombre, correo: funcionario.correo, etiqueta: 'Funcionario (solo lectura)', rol: 'funcionario' as const }]
+      : []),
   ];
 
   return NextResponse.json({ demoLogins });
