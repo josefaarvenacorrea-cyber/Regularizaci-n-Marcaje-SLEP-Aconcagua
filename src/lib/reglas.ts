@@ -92,6 +92,25 @@ export type CasoEstado = {
   salio?: string | null;
 };
 
+// Mensaje para la vista de solo lectura del funcionario: qué tiene que
+// mandarle a su jefatura por conducto interno para que ella lo regularice
+// acá — el funcionario nunca edita nada directamente.
+export function accionSolicitada(c: { tipo: string; motivo: string; confirmada: boolean }): string {
+  if (c.confirmada) return 'Ya fue regularizada por su jefatura. No necesita hacer nada más.';
+  if (c.motivo) return 'Su jefatura ya está regularizando este caso.';
+  const g = grupo(c.tipo);
+  if (g === 'falta') {
+    const p = pide(c.tipo);
+    if (p.e && p.s) return 'Informe a su jefatura, por conducto interno, las horas reales de entrada y salida de ese día.';
+    if (p.e) return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día.';
+    return 'Informe a su jefatura, por conducto interno, la hora real de salida de ese día.';
+  }
+  if (g === 'atraso') {
+    return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.';
+  }
+  return 'Si tiene un permiso, licencia médica u otro respaldo para esa fecha, entréguelo a su jefatura para que lo regularice.';
+}
+
 export function horaHabilitada(c: CasoEstado, horaSoloOlvido: boolean): boolean {
   const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
   if (!m || !m.hora) return false;
