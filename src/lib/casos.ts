@@ -167,6 +167,9 @@ export async function misCasos(session: Session, opts: { verHuerfanos?: boolean 
   if (session.rol === 'admin') {
     return opts.verHuerfanos ? todos.filter((c) => !c.jefatura) : todos;
   }
+  if (session.rol === 'funcionario') {
+    return todos.filter((c) => c.rut === session.rut);
+  }
   const [dot, cascada] = await Promise.all([loadDotacion(), getConfigBool('cascada', false)]);
   const jer = jerarquiaMap(dot);
   const pk = key(session.nombre);
