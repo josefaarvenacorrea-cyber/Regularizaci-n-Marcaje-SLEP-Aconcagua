@@ -14,6 +14,7 @@ import { RevisionRapida } from './RevisionRapida';
 import { CierreEnvio, type RegistroEntry } from './CierreEnvio';
 import { HistorialDrawer } from './HistorialDrawer';
 import { RespaldosAdmin } from './RespaldosAdmin';
+import { VistaFuncionario } from './VistaFuncionario';
 
 type Resumen = {
   jefaturas: JefaturaResumen[];
@@ -266,6 +267,10 @@ export function Workspace() {
 
   if (!session) {
     return <LoginScreen onEntrar={entrar} />;
+  }
+
+  if (session.rol === 'funcionario') {
+    return <VistaFuncionario session={session} onSalir={salir} />;
   }
 
   return (
