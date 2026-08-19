@@ -8,6 +8,7 @@ import { construirLibro } from '@/lib/exportXlsx';
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  if (session.rol === 'funcionario') return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
 
   const consolidado = request.nextUrl.searchParams.get('scope') === 'consolidado';
   const huerfanos = request.nextUrl.searchParams.get('huerfanos') === '1';
