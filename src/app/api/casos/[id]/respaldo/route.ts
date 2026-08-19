@@ -4,7 +4,12 @@ import { casoVisiblePara, getCasoById, insertRespaldo, listRespaldos } from '@/l
 
 export const runtime = 'nodejs';
 
-const MAX_BYTES = 8 * 1024 * 1024;
+// Vercel corta el cuerpo de una función serverless en ~4.5 MB a nivel de
+// plataforma, antes de que este código llegue a ejecutarse — un límite más
+// alto acá nunca se alcanza a aplicar para un archivo que ya venía
+// demasiado pesado, y en vez del mensaje de abajo el usuario ve un error
+// críptico de la plataforma. Por eso el tope real es más bajo que 8 MB.
+const MAX_BYTES = 4 * 1024 * 1024;
 const MAX_ARCHIVOS_POR_CASO = 6;
 const EXTENSIONES_PERMITIDAS = ['pdf', 'jpg', 'jpeg', 'png', 'heic', 'doc', 'docx'];
 
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
     return NextResponse.json({ error: 'No se recibió ningún archivo.' }, { status: 400 });
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: 'El archivo supera el tamaño máximo permitido (8 MB).' }, { status: 400 });
+    return NextResponse.json({ error: 'El archivo supera el tamaño máximo permitido (4 MB). Comprima el PDF o la imagen e intente de nuevo.' }, { status: 400 });
   }
   const ext = extensionDe(file.name);
   if (!EXTENSIONES_PERMITIDAS.includes(ext)) {
