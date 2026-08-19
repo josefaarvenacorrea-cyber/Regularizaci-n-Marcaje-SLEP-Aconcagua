@@ -10,6 +10,12 @@ function tamanoFmt(bytes: number): string {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Mismo tope que el servidor (ver comentario en la ruta de respaldo):
+// Vercel corta el cuerpo de la función en ~4.5 MB a nivel de plataforma, así
+// que conviene avisar antes de subir en vez de dejar que el navegador
+// dispare un request que la plataforma va a cortar con un error críptico.
+const MAX_BYTES = 4 * 1024 * 1024;
+
 // En modo compacto (una fila de la tabla "Mis casos", que puede mostrar
 // cientos de casos a la vez) NO se pide la lista de archivos hasta que la
 // jefatura hace clic para abrirla — si cada fila pidiera su lista al
@@ -49,6 +55,11 @@ export function RespaldoAdjuntos({
 
   async function subir(file: File) {
     setError('');
+    if (file.size > MAX_BYTES) {
+      setError('El archivo pesa ' + tamanoFmt(file.size) + '; el máximo permitido es 4 MB. Comprima el PDF o la imagen e intente de nuevo.');
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     setSubiendo(true);
     const form = new FormData();
     form.append('archivo', file);
