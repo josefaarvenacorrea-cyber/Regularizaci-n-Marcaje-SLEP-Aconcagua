@@ -4,6 +4,7 @@
 // autoritativa en cada PATCH.
 import type { Caso } from './casos';
 import {
+  accionSolicitada as calcAccionSolicitada,
   completa as calcCompleta,
   diaSemana,
   fechaLarga,
@@ -64,6 +65,7 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     listaParaEnviar: completa && !c.confirmada,
     estadoLabel: c.confirmada ? 'Justificada' : completa ? 'Lista para enviar' : c.motivo ? 'Incompleta' : 'Pendiente',
     estadoClass: c.confirmada ? 'tag-accent' : completa ? 'tag-neutral' : 'tag-outline',
+    accionSolicitada: calcAccionSolicitada({ tipo: c.tipo, motivo: c.motivo, confirmada: c.confirmada }),
     labelRespaldo: c.respaldos > 0 ? '📎 ' + c.respaldos + (c.respaldos === 1 ? ' archivo' : ' archivos') : 'Adjuntar respaldo',
     aviso: !completa && c.motivo
       ? faltaMarca
