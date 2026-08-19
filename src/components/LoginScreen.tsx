@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
-type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' };
+type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
 
 export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promise<string | null> }) {
   const [correo, setCorreo] = useState('');
@@ -37,10 +37,11 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
       }}
     >
       <div>
-        <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Acceso jefaturas</h6>
+        <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Regularización de marcajes</h6>
         <h1 style={{ fontSize: 40, margin: '0 0 12px', maxWidth: '22ch' }}>Justifique las inconsistencias de marcaje de su equipo</h1>
         <p className="text-muted" style={{ fontSize: 15, maxWidth: '52ch' }}>
-          Ingrese con su correo institucional. Verá solo los casos de los funcionarios que dependen de usted según la dotación efectiva vigente.
+          Ingrese con su correo institucional. Si tiene funcionarios a cargo verá los casos de su equipo según la dotación
+          efectiva vigente; si no, verá sus propias inconsistencias.
         </p>
         <div className="field" style={{ marginTop: 24, maxWidth: 400 }}>
           <label>Correo institucional</label>
