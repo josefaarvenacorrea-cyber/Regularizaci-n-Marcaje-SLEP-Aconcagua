@@ -8,6 +8,9 @@ import { notificarJustificacion } from '@/lib/mailer';
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+  // El funcionario solo tiene acceso de lectura a sus propios casos; nunca
+  // puede editarlos (eso es exclusivo de su jefatura).
+  if (session.rol === 'funcionario') return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
   const { id } = await ctx.params;
 
   if (!(await casoVisiblePara(session, id))) {
@@ -27,9 +30,6 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       `UPDATE inconsistencias SET motivo='', entrada_real='', salida_real='', obs='', confirmada=false, updated_at=$1 WHERE id=$2`,
       [now, id]
     );
-  } else if (body.toggleRespaldo) {
-    const nuevo = row.respaldo ? '' : 'respaldo-' + row.rut.replace(/\./g, '') + '.pdf';
-    await execute(`UPDATE inconsistencias SET respaldo=$1, updated_at=$2 WHERE id=$3`, [nuevo, now, id]);
   } else if (body.confirmar) {
     // El botón "Enviar": recién acá se considera el caso oficialmente
     // justificado (dispara el correo y desaparece de la vista por defecto).
