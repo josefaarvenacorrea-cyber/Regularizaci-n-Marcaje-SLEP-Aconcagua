@@ -29,7 +29,7 @@ function getSecret(): string {
   }
 }
 
-export type Session = { correo: string; rol: 'admin' | 'jefatura'; nombre: string; iat: number };
+export type Session = { correo: string; rol: 'admin' | 'jefatura' | 'funcionario'; nombre: string; rut: string; iat: number };
 
 function sign(payload: string): string {
   return crypto.createHmac('sha256', getSecret()).update(payload).digest('base64url');
@@ -103,6 +103,7 @@ export async function resolveLogin(correoRaw: string): Promise<{ session: Sessio
         correo: correoRaw,
         rol: 'admin',
         nombre: ficha ? ficha.nombre : 'Gestión de Personas',
+        rut: ficha?.rut ?? '',
         iat: Math.floor(Date.now() / 1000),
       },
     };
@@ -110,10 +111,15 @@ export async function resolveLogin(correoRaw: string): Promise<{ session: Sessio
   if (!ficha) return { error: 'Ese correo no está en la dotación efectiva vigente.' };
 
   const esJefatura = dot.some((d) => normKey(d.jefatura) === normKey(ficha.nombre));
-  if (!esJefatura) {
-    return { error: 'Su correo no tiene funcionarios a cargo en la dotación, por lo que no hay casos que justificar.' };
+  if (esJefatura) {
+    return {
+      session: { correo: correoRaw, rol: 'jefatura', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000) },
+    };
   }
+  // No tiene gente a cargo: entra en modo funcionario, de solo lectura, a ver
+  // sus propias inconsistencias (nunca puede editar nada — eso sigue siendo
+  // exclusivo de su jefatura).
   return {
-    session: { correo: correoRaw, rol: 'jefatura', nombre: ficha.nombre, iat: Math.floor(Date.now() / 1000) },
+    session: { correo: correoRaw, rol: 'funcionario', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000) },
   };
 }
