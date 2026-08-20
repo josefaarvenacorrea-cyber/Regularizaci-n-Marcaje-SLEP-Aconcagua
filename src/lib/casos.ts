@@ -375,6 +375,36 @@ export async function regularizarMasivoPorFecha(
   }
   return { afectados };
 }
+export type ResultadoRegularizacionMasivaJefatura = { afectados: string[] };
+
+// Igual que regularizarMasivoPorFecha, pero acotado al equipo de una
+// jefatura (respetando cascada si está habilitada, igual que misCasos) y a
+// un rango de fechas en vez de una fecha única — pensado para cuando el
+// equipo completo sale a una actividad grupal por varios días. Devuelve los
+// ids afectados para que quien llama pueda, por ejemplo, adjuntarles a todos
+// el mismo documento de respaldo.
+export async function regularizarMasivoParaJefatura(
+  session: Session,
+  fechaDesde: string,
+  fechaHasta: string,
+  motivo: string,
+  horaEntrada: string,
+  horaSalida: string
+): Promise<ResultadoRegularizacionMasivaJefatura> {
+  const mios = await misCasos(session, {});
+  const pendientes = mios.filter((c) => !c.confirmada && c.fecha >= fechaDesde && c.fecha <= fechaHasta);
+  const now = new Date().toISOString();
+  const afectados: string[] = [];
+  for (const c of pendientes) {
+    const p = pide(c.tipo);
+    await execute(
+      `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
+      [motivo, p.e ? horaEntrada : '', p.s ? horaSalida : '', now, c.id]
+    );
+    afectados.push(c.id);
+  }
+  return { afectados };
+}
 export type JefaturaResumen = {
   nombre: string;
   correo: string;
