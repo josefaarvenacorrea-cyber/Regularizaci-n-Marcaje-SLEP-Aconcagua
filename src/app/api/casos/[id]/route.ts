@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { execute } from '@/lib/db';
-import { casoVisiblePara, getCasoById, getCasoFormatted, getConfig, getConfigBool, loadDotacion } from '@/lib/casos';
+import { casoVisiblePara, getCasoById, getCasoFormatted, getConfig, getConfigBool, listRespaldos, loadDotacion } from '@/lib/casos';
 import { completa as calcCompleta, key, motivosDe } from '@/lib/reglas';
 import { notificarJustificacion } from '@/lib/mailer';
 
@@ -35,8 +35,9 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     // justificado (dispara el correo y desaparece de la vista por defecto).
     // Se revalida `completa` en el servidor — el botón del cliente ya lo
     // exige, pero no hay que confiar en eso.
+    const respaldos = await listRespaldos(id);
     const completaAhora = calcCompleta(
-      { tipo: row.tipo, motivo: row.motivo, entradaReal: row.entrada_real, salidaReal: row.salida_real, obs: row.obs, entro: row.entro, salio: row.salio },
+      { tipo: row.tipo, motivo: row.motivo, entradaReal: row.entrada_real, salidaReal: row.salida_real, obs: row.obs, entro: row.entro, salio: row.salio, respaldos: respaldos.length },
       horaSoloOlvido
     );
     if (!completaAhora) {
@@ -87,7 +88,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       .split(',')
       .map((c) => c.trim())
       .filter(Boolean);
-       // Hay que esperar esto, no dispararlo "en segundo plano": en Vercel la
+    // Hay que esperar esto, no dispararlo "en segundo plano": en Vercel la
     // función se apaga apenas se manda la respuesta, así que un fetch sin
     // await queda cortado a medio camino y el correo nunca sale — en local
     // (`next dev`) no se nota porque el proceso sigue vivo igual.
