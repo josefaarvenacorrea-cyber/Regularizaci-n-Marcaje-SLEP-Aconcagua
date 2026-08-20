@@ -349,6 +349,32 @@ export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoC
   return { reclasificados, eliminados };
 }
 
+export type ResultadoRegularizacionMasiva = { afectados: number };
+
+// Regulariza en bloque todos los casos pendientes de una fecha con el mismo
+// motivo y horario — pensado para días excepcionales donde casi todo el
+// personal queda con inconsistencias por la misma razón (p. ej. la puesta en
+// marcha del reloj control). Nunca toca un caso que la jefatura ya haya
+// enviado: solo alcanza a los que siguen pendientes.
+export async function regularizarMasivoPorFecha(
+  fecha: string,
+  motivo: string,
+  horaEntrada: string,
+  horaSalida: string
+): Promise<ResultadoRegularizacionMasiva> {
+  const rows = await query<IncRow>('SELECT * FROM inconsistencias WHERE fecha = $1 AND confirmada = false', [fecha]);
+  const now = new Date().toISOString();
+  let afectados = 0;
+  for (const r of rows) {
+    const p = pide(r.tipo);
+    await execute(
+      `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
+      [motivo, p.e ? horaEntrada : '', p.s ? horaSalida : '', now, r.id]
+    );
+    afectados++;
+  }
+  return { afectados };
+}
 export type JefaturaResumen = {
   nombre: string;
   correo: string;
