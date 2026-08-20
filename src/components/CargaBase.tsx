@@ -71,6 +71,44 @@ function TarjetaCarga({
   );
 }
 
+function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
+  const [mensaje, setMensaje] = useState('');
+  const [corrigiendo, setCorrigiendo] = useState(false);
+
+  async function corregir() {
+    setCorrigiendo(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ reclasificados: number; eliminados: number }>('/api/admin/corregir-atraso');
+      setMensaje(
+        r.reclasificados + ' casos reclasificados de Atraso a Falta Salida, ' + r.eliminados + ' eliminados por no ser una inconsistencia real.'
+      );
+      onCorregido();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo corregir la clasificación.');
+    } finally {
+      setCorrigiendo(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Corrección: Atraso mal clasificado</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
+        Corrige de una vez los casos &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro del margen de tolerancia del
+        turno (no eran atrasos reales) — los reclasifica a &ldquo;Falta Salida&rdquo; si falta esa marca, o los elimina si el día no
+        tiene ninguna inconsistencia real. Las cargas nuevas ya se corrigen solas; esto es solo para lo que ya estaba mal
+        cargado antes de ese cambio.
+      </p>
+      <button type="button" className="btn btn-secondary" onClick={corregir} disabled={corrigiendo}>
+        {corrigiendo ? 'Corrigiendo…' : 'Corregir clasificación de Atraso'}
+      </button>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 8 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 export function CargaBase({
   periodo,
   origen,
@@ -160,6 +198,8 @@ export function CargaBase({
       <p className="text-muted" style={{ fontSize: 12, marginTop: 10 }}>
         Los casos sin jefatura o con RUT ausente de la dotación no se asignan a nadie: corrija la columna <em>Jefatura</em> de la dotación o el RUT del reloj control y vuelva a cargar la base.
       </p>
+
+      <CorreccionAtraso onCorregido={onCargada} />
     </main>
   );
 }
