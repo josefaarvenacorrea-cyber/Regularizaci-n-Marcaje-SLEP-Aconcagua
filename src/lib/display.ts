@@ -25,12 +25,13 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
   const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
   const motivosMenu = motivosVisibles(c.tipo);
   const p = pide(c.tipo);
-  const estado = { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio };
+  const estado = { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio, respaldos: c.respaldos };
   const hab = calcHoraHabilitada(estado, horaSoloOlvido);
   const mk = marcas(c.tipo, c.entro, c.salio);
   const completa = calcCompleta(estado, horaSoloOlvido);
   const faltaObs = !!(m && m.obs && !String(c.obs || '').trim());
   const faltaMarca = !!(m && m.requiereMarca && mk.e === 'sin marca');
+  const faltaRespaldo = !!(m && m.requiereRespaldo && c.respaldos < 1);
 
   return {
     id: c.id,
@@ -71,13 +72,17 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     estadoLabel: c.confirmada ? 'Justificada' : completa ? 'Lista para enviar' : c.motivo ? 'Incompleta' : 'Pendiente',
     estadoClass: c.confirmada ? 'tag-accent' : completa ? 'tag-neutral' : 'tag-outline',
     accionSolicitada: calcAccionSolicitada({ tipo: c.tipo, motivo: c.motivo, confirmada: c.confirmada }),
-    labelRespaldo: c.respaldos > 0 ? '📎 ' + c.respaldos + (c.respaldos === 1 ? ' archivo' : ' archivos') : 'Adjuntar respaldo',
+    requiereRespaldo: !!(m && m.requiereRespaldo),
+    faltaRespaldo,
+    labelRespaldo: c.respaldos > 0 ? '📎 ' + c.respaldos + (c.respaldos === 1 ? ' archivo' : ' archivos') : m && m.requiereRespaldo ? 'Adjuntar respaldo (obligatorio)' : 'Adjuntar respaldo',
     aviso: !completa && c.motivo
       ? faltaMarca
         ? 'Este motivo no es válido sin una marca de entrada real: no puede usarse cuando no hay ninguna marca registrada.'
         : faltaObs
           ? 'Falta la observación obligatoria de este motivo.'
-          : 'Registre la hora real de la marca faltante para continuar.'
+          : faltaRespaldo
+            ? 'Este motivo requiere respaldo: adjunte el documento correspondiente (resolución de permiso, feriado legal, horas compensatorias o cometido funcionario, según corresponda) antes de poder enviarlo.'
+            : 'Registre la hora real de la marca faltante para continuar.'
       : '',
   };
 }
