@@ -58,10 +58,10 @@ export function Workspace() {
   const [histRut, setHistRut] = useState<string | null>(null);
   const [histItems, setHistItems] = useState<Caso[] | null>(null);
   const [firma, setFirma] = useState(false);
-  const [notificar, setNotificar] = useState(true);
   const [filtroJefaturaActivo, setFiltroJefaturaActivo] = useState<string | null>(null);
   const [mensajeExcel, setMensajeExcel] = useState('');
   const [mensajeEnviado, setMensajeEnviado] = useState('');
+  const [enviandoGdp, setEnviandoGdp] = useState(false);
   const [avisoGlobal, setAvisoGlobal] = useState('');
 
   const esAdmin = session?.rol === 'admin';
@@ -221,8 +221,17 @@ export function Workspace() {
     }
   }
 
-  function onEnviar() {
-    setMensajeEnviado('Enviado a Gestión de Personas el ' + new Date().toLocaleString('es-CL') + (notificar ? ' · funcionarios notificados' : ''));
+  async function onEnviar() {
+    setEnviandoGdp(true);
+    setMensajeEnviado('');
+    try {
+      const r = await api.post<{ filas: number }>('/api/cierre/enviar');
+      setMensajeEnviado('Enviado a Gestión de Personas el ' + new Date().toLocaleString('es-CL') + ' · ' + r.filas + (r.filas === 1 ? ' fila' : ' filas') + ' con Excel adjunto.');
+    } catch (e) {
+      setMensajeEnviado(e instanceof ApiError ? e.message : 'No se pudo enviar a Gestión de Personas.');
+    } finally {
+      setEnviandoGdp(false);
+    }
   }
 
   async function onDescargarRegistro(id: number) {
@@ -378,11 +387,10 @@ export function Workspace() {
           segundaInstancia={segundaInstancia}
           firma={firma}
           setFirma={setFirma}
-          notificar={notificar}
-          setNotificar={setNotificar}
           onExportar={() => onExportar('normal')}
           onConsolidado={() => onExportar('consolidado')}
           onEnviar={onEnviar}
+          enviandoGdp={enviandoGdp}
           mensajeExcel={mensajeExcel}
           mensajeEnviado={mensajeEnviado}
           registro={registro}
