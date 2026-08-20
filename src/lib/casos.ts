@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta, corregirTipoAtraso } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso, pide } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
