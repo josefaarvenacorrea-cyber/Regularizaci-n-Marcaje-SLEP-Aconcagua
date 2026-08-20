@@ -11,6 +11,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas técnicos en dispositivos de marcaje', hora: true, obs: true },
     { v: 'Salida por emergencia o fuerza mayor', hora: true, obs: true },
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
     { v: 'Autorizar el descuento' },
   ],
   atraso: [
@@ -20,6 +21,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     // El permiso gremial no exime de marcar: si el caso no tiene una marca de
     // entrada real (columna "Entró" del reloj control), este motivo no basta.
     { v: 'Permiso Gremial', requiereMarca: true },
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
     { v: 'Autorizar el descuento' },
   ],
   inasistencia: [
@@ -28,6 +30,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
     { v: 'Permiso Gremial' },
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
     { v: 'Autorizar el descuento' },
   ],
 };
