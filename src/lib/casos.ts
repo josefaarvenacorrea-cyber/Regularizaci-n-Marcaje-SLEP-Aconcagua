@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
@@ -260,7 +260,15 @@ export async function actualizarBase(
     const porClave = new Map(existentes.map((r) => [claveCaso(r.rut, r.fecha, r.tipo), r]));
 
     for (const r of registros) {
-      const clave = claveCaso(r.rut, r.fecha, r.tipo);
+      // El "Observado" del reloj control a veces marca Atraso en días donde
+      // la entrada en realidad cayó dentro del margen de tolerancia del
+      // turno — no era un atraso real. Se corrige acá, antes de calcular la
+      // clave de negocio, para que quede bien clasificado desde la carga.
+      const tipoCorregido = corregirTipoAtraso(r.tipo, r.turno, r.entro, r.salio);
+      if (tipoCorregido === null) continue; // no es una inconsistencia real
+      const tipo = tipoCorregido ?? r.tipo;
+
+      const clave = claveCaso(r.rut, r.fecha, tipo);
       const d = dotByRut.get(r.rut);
       const jefatura = d ? (d.jefatura && d.jefatura !== '-' ? d.jefatura : '') : null;
       const identificado = d ? 1 : 0;
@@ -272,7 +280,7 @@ export async function actualizarBase(
           `INSERT INTO inconsistencias
             (id, rut, rut_fmt, nombre, unidad, fecha, turno, tipo, entro, salio, periodo, jefatura, identificado, updated_at)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-          [id, r.rut, r.rutFmt || r.rut, r.nombre, d ? d.area : r.unidad, r.fecha, r.turno, r.tipo, r.entro, r.salio, periodo, jefatura, identificado, now]
+          [id, r.rut, r.rutFmt || r.rut, r.nombre, d ? d.area : r.unidad, r.fecha, r.turno, tipo, r.entro, r.salio, periodo, jefatura, identificado, now]
         );
         nuevos++;
         continue;
@@ -314,6 +322,31 @@ export async function actualizarBase(
     actualizados,
     sinCambios,
   };
+}
+
+export type ResultadoCorreccionAtraso = { reclasificados: number; eliminados: number };
+
+// Corrección de una vez para los casos "Atraso" que ya están cargados desde
+// antes de que `actualizarBase` aplicara `corregirTipoAtraso` en la carga
+// misma (ver ahí el porqué). No usa la clave de negocio de actualizarBase
+// porque acá se actualiza directo por id, sobre filas que ya existen.
+export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoCorreccionAtraso> {
+  const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE tipo = 'Atraso'`);
+  const now = new Date().toISOString();
+  let reclasificados = 0;
+  let eliminados = 0;
+  for (const r of rows) {
+    const resultado = corregirTipoAtraso(r.tipo, r.turno, r.entro, r.salio);
+    if (resultado === undefined) continue;
+    if (resultado === null) {
+      await execute('DELETE FROM inconsistencias WHERE id = $1', [r.id]);
+      eliminados++;
+    } else {
+      await execute('UPDATE inconsistencias SET tipo = $1, updated_at = $2 WHERE id = $3', [resultado, now, r.id]);
+      reclasificados++;
+    }
+  }
+  return { reclasificados, eliminados };
 }
 
 export type JefaturaResumen = {
