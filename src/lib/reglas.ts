@@ -4,7 +4,7 @@
 // completo). Módulo compartido: lo usan tanto las rutas de API (validación
 // autoritativa) como los componentes de UI (estado derivado).
 
-export type Motivo = { v: string; hora?: boolean; obs?: boolean; requiereMarca?: boolean; oculto?: boolean };
+export type Motivo = { v: string; hora?: boolean; obs?: boolean; requiereMarca?: boolean; requiereRespaldo?: boolean; oculto?: boolean };
 
 export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
   falta: [
@@ -20,9 +20,9 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Autorizar el descuento' },
   ],
   atraso: [
-    { v: 'Permiso' },
-    { v: 'Cometido Funcionario', obs: true },
-    { v: 'Horas Compensatorias' },
+    { v: 'Permiso', requiereRespaldo: true },
+    { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
+    { v: 'Horas Compensatorias', requiereRespaldo: true },
     // El permiso gremial no exime de marcar: si el caso no tiene una marca de
     // entrada real (columna "Entró" del reloj control), este motivo no basta.
     { v: 'Permiso Gremial', requiereMarca: true },
@@ -31,8 +31,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Autorizar el descuento' },
   ],
   inasistencia: [
-    { v: 'Permiso' },
-    { v: 'Horas Compensatorias' },
+    { v: 'Permiso', requiereRespaldo: true },
+    { v: 'Horas Compensatorias', requiereRespaldo: true },
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
     { v: 'Permiso Gremial' },
@@ -89,6 +89,16 @@ export function motivosDe(tipo: string): Motivo[] {
 // mostrar a una jefatura para elegir manualmente.
 export function motivosVisibles(tipo: string): Motivo[] {
   return motivosDe(tipo).filter((m) => !m.oculto);
+}
+
+// A diferencia de motivosDe/completa (que necesitan saber el tipo de
+// inconsistencia para ubicar el grupo correcto), la regularización masiva de
+// una jefatura no tiene un único tipo — recorre un rango de fechas que puede
+// mezclar varios. Por eso este chequeo busca el motivo en todo el catálogo,
+// no en un grupo puntual.
+export function motivoRequiereRespaldo(motivo: string): boolean {
+  const k = key(motivo);
+  return Object.values(CATALOGO).some((lista) => lista.some((m) => key(m.v) === k && m.requiereRespaldo));
 }
 
 // Jefaturas habilitadas para regularizar en bloque a su propio equipo (p.
@@ -154,6 +164,7 @@ export type CasoEstado = {
   obs: string;
   entro?: string | null;
   salio?: string | null;
+  respaldos?: number;
 };
 
 // Mensaje para la vista de solo lectura del funcionario: qué tiene que
@@ -186,6 +197,7 @@ export function completa(c: CasoEstado, horaSoloOlvido: boolean): boolean {
   if (!m) return false;
   if (m.obs && !String(c.obs || '').trim()) return false;
   if (m.requiereMarca && marcas(c.tipo, c.entro ?? null, c.salio ?? null).e === 'sin marca') return false;
+  if (m.requiereRespaldo && (c.respaldos ?? 0) < 1) return false;
   if (horaHabilitada(c, horaSoloOlvido)) {
     const p = pide(c.tipo);
     if (p.e && !c.entradaReal) return false;
