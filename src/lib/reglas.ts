@@ -91,6 +91,22 @@ export function motivosVisibles(tipo: string): Motivo[] {
   return motivosDe(tipo).filter((m) => !m.oculto);
 }
 
+// Jefaturas habilitadas para regularizar en bloque a su propio equipo (p.
+// ej. cuando el equipo completo sale a una actividad grupal y se busca
+// agilizar el trámite) — lista corta y puntual, no una opción general para
+// cualquier jefatura. Los nombres deben coincidir exactamente con los de la
+// dotación (comparados con `key()`, que ya ignora mayúsculas y tildes).
+export const JEFATURAS_MASIVO = [
+  'Carmen Gloria Vergara Ocampo',
+  'Katherine Belinda Menares Poblete',
+  'Yasna Anaquina Flos Jara',
+];
+
+export function puedeRegularizarMasivo(nombre: string): boolean {
+  const k = key(nombre);
+  return JEFATURAS_MASIVO.some((n) => key(n) === k);
+}
+
 export function pide(tipo: string): { e: boolean; s: boolean } {
   const t = key(tipo);
   if (/falta entrada/.test(t)) return { e: true, s: false };
@@ -141,78 +157,4 @@ export type CasoEstado = {
 };
 
 // Mensaje para la vista de solo lectura del funcionario: qué tiene que
-// mandarle a su jefatura por conducto interno para que ella lo regularice
-// acá — el funcionario nunca edita nada directamente.
-export function accionSolicitada(c: { tipo: string; motivo: string; confirmada: boolean }): string {
-  if (c.confirmada) return 'Ya fue regularizada por su jefatura. No necesita hacer nada más.';
-  if (c.motivo) return 'Su jefatura ya está regularizando este caso.';
-  const g = grupo(c.tipo);
-  if (g === 'falta') {
-    const p = pide(c.tipo);
-    if (p.e && p.s) return 'Informe a su jefatura, por conducto interno, las horas reales de entrada y salida de ese día.';
-    if (p.e) return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día.';
-    return 'Informe a su jefatura, por conducto interno, la hora real de salida de ese día.';
-  }
-  if (g === 'atraso') {
-    return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.';
-  }
-  return 'Si tiene un permiso, licencia médica u otro respaldo para esa fecha, entréguelo a su jefatura para que lo regularice.';
-}
-
-export function horaHabilitada(c: CasoEstado, horaSoloOlvido: boolean): boolean {
-  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
-  if (!m || !m.hora) return false;
-  return horaSoloOlvido ? /olvido/.test(key(m.v)) : true;
-}
-
-export function completa(c: CasoEstado, horaSoloOlvido: boolean): boolean {
-  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
-  if (!m) return false;
-  if (m.obs && !String(c.obs || '').trim()) return false;
-  if (m.requiereMarca && marcas(c.tipo, c.entro ?? null, c.salio ?? null).e === 'sin marca') return false;
-  if (horaHabilitada(c, horaSoloOlvido)) {
-    const p = pide(c.tipo);
-    if (p.e && !c.entradaReal) return false;
-    if (p.s && !c.salidaReal) return false;
-  }
-  return true;
-}
-
-export function tagClass(tipo: string): string {
-  const t = key(tipo);
-  if (/injustificada|inasistencia/.test(t)) return 'tag-neutral';
-  if (/atraso|adelanto/.test(t)) return 'tag-outline';
-  return 'tag-accent';
-}
-
-export function marcas(tipo: string, entro: string | null, salio: string | null) {
-  const t = key(tipo);
-  const faltaE = /falta entrada|injustificada|inasistencia/.test(t);
-  const faltaS = /falta salida|injustificada|inasistencia/.test(t);
-  return { e: faltaE ? 'sin marca' : entro || 'sin marca', s: faltaS ? 'sin marca' : salio || 'sin marca' };
-}
-
-export function fmtFecha(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  if (isNaN(d.getTime())) return f;
-  return String(d.getDate()).padStart(2, '0') + ' ' + MESES[d.getMonth()].slice(0, 3);
-}
-
-export function diaSemana(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  return isNaN(d.getTime()) ? '' : DIAS[d.getDay()];
-}
-
-export function fechaLarga(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  if (isNaN(d.getTime())) return f;
-  return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()];
-}
-
-export function slug(s: string): string {
-  return key(s).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
-
-export function nombreArchivo(periodo: string, alcance: string): string {
-  return 'Regularizacion_marcajes_' + slug(periodo) + '_' + slug(alcance) + '.xlsx';
-}
+// mandarle a su jefatura por con
