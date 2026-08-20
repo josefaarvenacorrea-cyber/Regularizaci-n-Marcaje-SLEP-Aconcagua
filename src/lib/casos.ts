@@ -316,6 +316,53 @@ export async function actualizarBase(
   };
 }
 
+export type JefaturaResumen = {
+  nombre: string;
+  correo: string;
+  area: string;
+  cargo: string;
+  equipo: number;
+  casos: number;
+  resueltos: number;
+  pct: number;
+};
+
+// Avance por jefatura (casos asignados vs. confirmados) — usado tanto por el
+// panel de avance como por el recordatorio de plazo, para no duplicar esta
+// cuenta en dos rutas de API.
+export async function jefaturasResumen(): Promise<JefaturaResumen[]> {
+  const [dot, todos] = await Promise.all([loadDotacion(), allCasos()]);
+
+  const conteo = new Map<string, { casos: number; res: number }>();
+  for (const c of todos) {
+    if (!c.jefatura) continue;
+    const k = key(c.jefatura);
+    const e = conteo.get(k) || { casos: 0, res: 0 };
+    e.casos++;
+    if (c.confirmada) e.res++;
+    conteo.set(k, e);
+  }
+
+  const nombresJefes = [...new Set(dot.map((d) => d.jefatura).filter((j) => j && j !== '-'))];
+  return nombresJefes
+    .map((nom) => {
+      const k = key(nom);
+      const ficha = dot.find((d) => key(d.nombre) === k);
+      const c = conteo.get(k) || { casos: 0, res: 0 };
+      return {
+        nombre: nom,
+        correo: ficha?.correo || '',
+        area: ficha?.area || '—',
+        cargo: ficha?.cargo || 'Jefatura',
+        equipo: dot.filter((d) => key(d.jefatura || '') === k).length,
+        casos: c.casos,
+        resueltos: c.res,
+        pct: c.casos ? Math.round((c.res / c.casos) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.casos - b.resueltos - (a.casos - a.resueltos));
+}
+
 export type ResultadoDotacion = {
   funcionarios: number;
   jefaturas: number;
