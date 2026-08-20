@@ -162,9 +162,14 @@ export function Bandeja({
                     onChange={(e) => setObsDraft((s) => ({ ...s, [c.id]: e.target.value }))}
                     onBlur={(e) => onUpdate(c.id, { obs: e.target.value })}
                   />
-                  <div style={{ marginTop: 3 }}>
+                                  <div style={{ marginTop: 3 }}>
                     <RespaldoAdjuntos casoId={c.id} disabled={d.confirmada} countInicial={d.respaldos} compact />
                   </div>
+                  {d.faltaRespaldo && (
+                    <div style={{ fontSize: 10.5, color: 'var(--color-accent-700)', marginTop: 2, maxWidth: 240 }}>
+                      Este motivo requiere adjuntar respaldo antes de poder enviarlo.
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '7px 10px', verticalAlign: 'top' }}>
                   <span className={`tag ${d.estadoClass}`}>{d.estadoLabel}</span>
