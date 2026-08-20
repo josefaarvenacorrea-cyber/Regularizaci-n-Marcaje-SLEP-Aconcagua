@@ -109,6 +109,78 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
   );
 }
 
+function RegularizacionMasiva({ onRegularizado }: { onRegularizado: () => void }) {
+  const [fecha, setFecha] = useState('2026-01-02');
+  const [motivo, setMotivo] = useState('Pruebas por instalación de reloj de marcación');
+  const [horaEntrada, setHoraEntrada] = useState('08:00');
+  const [horaSalida, setHoraSalida] = useState('17:00');
+  const [mensaje, setMensaje] = useState('');
+  const [procesando, setProcesando] = useState(false);
+
+  async function regularizar() {
+    if (!fecha || !motivo.trim()) {
+      setMensaje('Complete la fecha y el motivo.');
+      return;
+    }
+    const ok = window.confirm(
+      'Esto va a regularizar de una vez TODOS los casos pendientes del ' +
+        fecha +
+        ' con el motivo "' +
+        motivo +
+        '"' +
+        (horaEntrada ? ', entrada ' + horaEntrada : '') +
+        (horaSalida ? ', salida ' + horaSalida : '') +
+        '. No afecta los casos que la jefatura ya haya enviado. ¿Confirma?'
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ afectados: number }>('/api/admin/regularizar-masivo', { fecha, motivo, horaEntrada, horaSalida });
+      setMensaje(r.afectados + ' casos del ' + fecha + ' quedaron regularizados con ese motivo.');
+      onRegularizado();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo regularizar en bloque.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Regularización masiva por fecha</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
+        Para días excepcionales donde casi todo el personal queda con inconsistencias por la misma razón (p. ej. la puesta
+        en marcha del reloj control): regulariza de una vez todos los casos pendientes de esa fecha con el mismo motivo y
+        horario. No toca los casos que la jefatura ya haya enviado, y no manda correos de notificación.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 12.5 }}>
+          Fecha
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5, flex: '1 1 260px' }}>
+          Motivo
+          <input type="text" value={motivo} onChange={(e) => setMotivo(e.target.value)} style={{ display: 'block', marginTop: 4, width: '100%' }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Hora entrada
+          <input type="time" value={horaEntrada} onChange={(e) => setHoraEntrada(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Hora salida
+          <input type="time" value={horaSalida} onChange={(e) => setHoraSalida(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <button type="button" className="btn btn-secondary" onClick={regularizar} disabled={procesando}>
+          {procesando ? 'Regularizando…' : 'Regularizar en bloque'}
+        </button>
+      </div>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 export function CargaBase({
   periodo,
   origen,
@@ -200,6 +272,7 @@ export function CargaBase({
       </p>
 
       <CorreccionAtraso onCorregido={onCargada} />
+      <RegularizacionMasiva onRegularizado={onCargada} />
     </main>
   );
 }
