@@ -87,7 +87,11 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       .split(',')
       .map((c) => c.trim())
       .filter(Boolean);
-    notificarJustificacion(updated, {
+       // Hay que esperar esto, no dispararlo "en segundo plano": en Vercel la
+    // función se apaga apenas se manda la respuesta, así que un fetch sin
+    // await queda cortado a medio camino y el correo nunca sale — en local
+    // (`next dev`) no se nota porque el proceso sigue vivo igual.
+    await notificarJustificacion(updated, {
       funcionarioCorreo: funcionario?.correo,
       jefaturaCorreo: jefe?.correo,
       jefaturaNombre: updated.jefatura || session.nombre,
