@@ -12,13 +12,18 @@ import {
   horaHabilitada as calcHoraHabilitada,
   marcas,
   motivosDe,
+  motivosVisibles,
   pide,
   tagClass,
 } from './reglas';
 
 export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) {
-  const motivos = motivosDe(c.tipo);
-  const m = motivos.find((x) => x.v === c.motivo);
+  // El motivo actual del caso puede ser uno "oculto" (p. ej. de la
+  // regularización masiva) que ya no se ofrece para elegir — hay que poder
+  // encontrarlo igual para calcular completa/hora habilitada correctamente,
+  // aunque no aparezca en el menú desplegable.
+  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
+  const motivosMenu = motivosVisibles(c.tipo);
   const p = pide(c.tipo);
   const estado = { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio };
   const hab = calcHoraHabilitada(estado, horaSoloOlvido);
@@ -43,7 +48,7 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
     tagClass: tagClass(c.tipo),
     marcaEntrada: mk.e,
     marcaSalida: mk.s,
-    motivos: [{ v: '', label: 'Seleccionar motivo…' }].concat(motivos.map((x) => ({ v: x.v, label: x.v }))),
+    motivos: [{ v: '', label: 'Seleccionar motivo…' }].concat(motivosMenu.map((x) => ({ v: x.v, label: x.v }))),
     motivo: c.motivo,
     obs: c.obs,
     entradaReal: c.entradaReal,
