@@ -15,6 +15,7 @@ import { CierreEnvio, type RegistroEntry } from './CierreEnvio';
 import { HistorialDrawer } from './HistorialDrawer';
 import { RespaldosAdmin } from './RespaldosAdmin';
 import { VistaFuncionario } from './VistaFuncionario';
+import { RegularizacionMasivaJefatura } from './RegularizacionMasivaJefatura';
 
 type Resumen = {
   jefaturas: JefaturaResumen[];
@@ -49,6 +50,7 @@ async function descargarExport(url: string): Promise<string> {
 export function Workspace() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [config, setConfig] = useState<Record<string, string>>({});
+  const [puedeMasivo, setPuedeMasivo] = useState(false);
   const [vista, setVista] = useState('bandeja');
   const [verHuerfanos, setVerHuerfanos] = useState(false);
   const [casos, setCasos] = useState<Caso[]>([]);
@@ -76,9 +78,10 @@ export function Workspace() {
 
   const fetchSession = useCallback(async () => {
     try {
-      const r = await api.get<{ session: Session | null; config: Record<string, string> }>('/api/session');
+      const r = await api.get<{ session: Session | null; config: Record<string, string>; puedeMasivo: boolean }>('/api/session');
       setSession(r.session);
       setConfig(r.config);
+      setPuedeMasivo(r.puedeMasivo);
       return r.session;
     } catch {
       setSession(null);
@@ -144,8 +147,9 @@ export function Workspace() {
       setMensajeEnviado('');
       setCursorId(null);
       setVista(r.session.rol === 'admin' ? 'panel' : 'bandeja');
-      const cfg = await api.get<{ session: Session | null; config: Record<string, string> }>('/api/session');
+      const cfg = await api.get<{ session: Session | null; config: Record<string, string>; puedeMasivo: boolean }>('/api/session');
       setConfig(cfg.config);
+      setPuedeMasivo(cfg.puedeMasivo);
       return null;
     } catch (e) {
       return e instanceof ApiError ? e.message : 'No se pudo iniciar sesión.';
@@ -263,12 +267,14 @@ export function Workspace() {
         { key: 'envio', label: 'Excel y repositorio' },
       ];
     }
-    return [
+    const base = [
       { key: 'bandeja', label: 'Mis casos', badge: total ? String(total) : '' },
       { key: 'rapida', label: 'Revisión rápida', badge: pendientes ? String(pendientes) : '' },
       { key: 'envio', label: 'Cierre y Excel' },
     ];
-  }, [esAdmin, total, pendientes]);
+    if (puedeMasivo) base.push({ key: 'masivo', label: 'Regularización grupal', badge: '' });
+    return base;
+  }, [esAdmin, total, pendientes, puedeMasivo]);
 
   if (session === undefined) {
     return <div style={{ padding: 60, textAlign: 'center' }} className="text-muted">Cargando…</div>;
@@ -373,6 +379,10 @@ export function Workspace() {
       )}
 
       {esAdmin && vista === 'respaldos' && <RespaldosAdmin />}
+
+      {!esAdmin && puedeMasivo && vista === 'masivo' && (
+        <RegularizacionMasivaJefatura onRegularizado={() => { fetchCasos(false); }} />
+      )}
 
       {vista === 'envio' && (
         <CierreEnvio
