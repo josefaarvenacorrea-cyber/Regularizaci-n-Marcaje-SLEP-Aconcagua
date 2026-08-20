@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { api, ApiError } from '@/lib/api';
 
 export type JefaturaResumen = {
   nombre: string;
@@ -35,6 +36,20 @@ export function PanelAvance({
   onVerHuerfanos: () => void;
 }) {
   const [mensajeRecordatorio, setMensajeRecordatorio] = useState('');
+  const [enviandoRecordatorio, setEnviandoRecordatorio] = useState(false);
+
+  async function enviarRecordatorio() {
+    setEnviandoRecordatorio(true);
+    setMensajeRecordatorio('');
+    try {
+      const r = await api.post<{ enviados: number }>('/api/admin/recordatorio');
+      setMensajeRecordatorio('Recordatorio enviado a ' + r.enviados + (r.enviados === 1 ? ' jefatura' : ' jefaturas') + ' el ' + new Date().toLocaleString('es-CL') + '.');
+    } catch (e) {
+      setMensajeRecordatorio(e instanceof ApiError ? e.message : 'No se pudo enviar el recordatorio.');
+    } finally {
+      setEnviandoRecordatorio(false);
+    }
+  }
 
   return (
     <main style={{ maxWidth: 1180, margin: '0 auto', padding: '32px 32px 90px' }}>
@@ -94,9 +109,10 @@ export function PanelAvance({
           <button
             type="button"
             className="btn btn-secondary"
-            onClick={() => setMensajeRecordatorio('Recordatorio enviado a ' + jefaturasPendientes + ' jefaturas el ' + new Date().toLocaleString('es-CL') + '.')}
+            onClick={enviarRecordatorio}
+            disabled={enviandoRecordatorio || jefaturasPendientes === 0}
           >
-            Enviar recordatorio
+            {enviandoRecordatorio ? 'Enviando…' : 'Enviar recordatorio'}
           </button>
           <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 8 }}>{mensajeRecordatorio}</div>
         </div>
