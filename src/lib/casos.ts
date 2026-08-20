@@ -137,10 +137,11 @@ function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: b
     completa: false,
     confirmada: !!r.confirmada,
   };
-  c.completa = calcCompleta(
-    { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio },
+    c.completa = calcCompleta(
+    { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio, respaldos: c.respaldos },
     horaSoloOlvido
   );
+  
   return c;
 }
 
