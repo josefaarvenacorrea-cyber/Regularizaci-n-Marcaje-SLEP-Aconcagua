@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { Caso } from '@/lib/casos';
 import { casoDisplay } from '@/lib/display';
-import { motivosDe } from '@/lib/reglas';
+import { motivosVisibles } from '@/lib/reglas';
 import { RespaldoAdjuntos } from './RespaldoAdjuntos';
 
 function vecinoPendiente(casos: Caso[], id: string | null, paso: number, esPendiente: (c: Caso) => boolean): string | null {
@@ -91,7 +91,7 @@ export function RevisionRapida({
 
         <div className="text-muted" style={{ fontSize: 12, marginBottom: 7 }}>Motivos permitidos para {d.tipo}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {motivosDe(d.tipo).map((m) => (
+          {motivosVisibles(d.tipo).map((m) => (
             <button
               key={m.v}
               type="button"
