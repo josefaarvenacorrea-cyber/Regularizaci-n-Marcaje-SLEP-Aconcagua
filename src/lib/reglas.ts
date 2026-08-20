@@ -82,6 +82,37 @@ export function pide(tipo: string): { e: boolean; s: boolean } {
   return { e: true, s: true };
 }
 
+// El turno trae su propio margen de tolerancia en el texto, ej. "BH - 09:00
+// hrs. (60 mins)" → no es atraso si entra antes de las 10:00. Devuelve null
+// si el turno no viene en ese formato o no hay hora de entrada (no se puede
+// evaluar).
+function toleranciaDeTurno(turno: string): { inicioMin: number; tolMin: number } | null {
+  const m = String(turno || '').match(/(\d{1,2}):(\d{2})\s*hrs.*?\((\d+)\s*mins?\)/);
+  if (!m) return null;
+  return { inicioMin: parseInt(m[1], 10) * 60 + parseInt(m[2], 10), tolMin: parseInt(m[3], 10) };
+}
+
+function aMinutos(hora: string | null | undefined): number | null {
+  const m = String(hora || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+// Reclasifica un caso "Atraso" cuya entrada en realidad cae dentro del
+// margen de tolerancia del turno — no es un atraso real. Si además falta la
+// marca de salida, el problema real de ese día es "Falta Salida". Si la
+// salida también está marcada, ese día no tiene ninguna inconsistencia.
+// Devuelve: undefined (no corresponde tocar este caso), null (no es una
+// inconsistencia real, debe eliminarse) o el tipo corregido.
+export function corregirTipoAtraso(tipo: string, turno: string, entro: string | null, salio: string | null): string | null | undefined {
+  if (key(tipo) !== 'atraso') return undefined;
+  const tol = toleranciaDeTurno(turno);
+  const entroMin = aMinutos(entro);
+  if (!tol || entroMin === null) return undefined;
+  if (entroMin > tol.inicioMin + tol.tolMin) return undefined; // atraso real, no cambia
+  return salio ? null : 'Falta Salida';
+}
+
 export type CasoEstado = {
   tipo: string;
   motivo: string;
