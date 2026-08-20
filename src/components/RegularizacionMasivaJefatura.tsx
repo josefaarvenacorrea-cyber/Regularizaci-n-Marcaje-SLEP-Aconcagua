@@ -106,11 +106,12 @@ export function RegularizacionMasivaJefatura({ onRegularizado }: { onRegularizad
         </div>
 
         <label style={{ fontSize: 12.5, display: 'block', marginTop: 14 }}>
-          Documento de respaldo (opcional — memo, nómina de asistencia, etc.)
+          Documento de respaldo (memo, nómina de asistencia, resolución, etc.)
           <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" style={{ display: 'block', marginTop: 4 }} />
         </label>
         <div className="text-muted" style={{ fontSize: 11.5, marginTop: 4 }}>
-          PDF, imagen o Word, máximo 4 MB. Si lo adjunta, queda guardado en cada uno de los casos que se regularicen.
+          PDF, imagen o Word, máximo 4 MB. Si el motivo es un permiso (horas compensatorias, feriado legal, cometido
+          funcionario, etc.) es obligatorio adjuntarlo. Queda guardado en cada uno de los casos que se regularicen.
         </div>
 
         <button type="button" className="btn btn-primary" onClick={regularizar} disabled={procesando} style={{ marginTop: 18 }}>
