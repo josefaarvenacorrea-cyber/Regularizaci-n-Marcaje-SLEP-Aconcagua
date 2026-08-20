@@ -20,11 +20,10 @@ export function CierreEnvio({
   segundaInstancia,
   firma,
   setFirma,
-  notificar,
-  setNotificar,
   onExportar,
   onConsolidado,
   onEnviar,
+  enviandoGdp,
   mensajeExcel,
   mensajeEnviado,
   registro,
@@ -41,11 +40,10 @@ export function CierreEnvio({
   segundaInstancia: boolean;
   firma: boolean;
   setFirma: (v: boolean) => void;
-  notificar: boolean;
-  setNotificar: (v: boolean) => void;
   onExportar: () => void;
   onConsolidado: () => void;
   onEnviar: () => void;
+  enviandoGdp: boolean;
   mensajeExcel: string;
   mensajeEnviado: string;
   registro: RegistroEntry[] | null;
@@ -116,10 +114,6 @@ export function CierreEnvio({
             <input type="checkbox" checked={firma} onChange={(e) => setFirma(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--color-accent)' }} />
             <span>Firmo como <strong>{session.nombre}</strong></span>
           </label>
-          <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13, marginTop: 8, cursor: 'pointer' }}>
-            <input type="checkbox" checked={notificar} onChange={(e) => setNotificar(e.target.checked)} style={{ marginTop: 3, accentColor: 'var(--color-accent)' }} />
-            <span>Notificar por correo a cada funcionario la justificación registrada.</span>
-          </label>
           {pendientes > 0 && (
             <div style={{ marginTop: 14, padding: '10px 12px', border: '1px solid var(--color-accent-400)', background: 'var(--color-accent-100)', fontSize: 12 }}>
               Quedan {pendientes} inconsistencias sin motivo. Puede exportar solo lo resuelto y completar el resto antes del {plazoTexto}.
@@ -128,7 +122,9 @@ export function CierreEnvio({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 18 }}>
             <button type="button" className="btn btn-primary" onClick={onExportar} disabled={noPuedeExportar}>Descargar Excel ({resueltas === 1 ? '1 fila' : resueltas + ' filas'})</button>
             {!esAdmin && segundaInstancia && (
-              <button type="button" className="btn btn-secondary" onClick={onEnviar} disabled={noPuedeExportar}>Enviar a Gestión de Personas</button>
+              <button type="button" className="btn btn-secondary" onClick={onEnviar} disabled={noPuedeExportar || enviandoGdp}>
+                {enviandoGdp ? 'Enviando…' : 'Enviar a Gestión de Personas'}
+              </button>
             )}
           </div>
           <div className="text-muted" style={{ fontSize: 12, marginTop: 10 }}>{mensajeEnvio}</div>
