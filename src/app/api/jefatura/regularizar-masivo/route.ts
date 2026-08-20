@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import { puedeRegularizarMasivo } from '@/lib/reglas';
+import { motivoRequiereRespaldo, puedeRegularizarMasivo } from '@/lib/reglas';
 import { insertRespaldo, regularizarMasivoParaJefatura } from '@/lib/casos';
 
 export const runtime = 'nodejs';
@@ -53,6 +53,10 @@ export async function POST(request: NextRequest) {
     contenido = Buffer.from(await archivo.arrayBuffer());
     archivoNombre = archivo.name;
     archivoTipo = archivo.type || '';
+  }
+
+  if (motivoRequiereRespaldo(motivo) && !contenido) {
+    return NextResponse.json({ error: 'Este motivo requiere adjuntar un respaldo (documento, resolución, etc.) antes de regularizar.' }, { status: 400 });
   }
 
   const { afectados } = await regularizarMasivoParaJefatura(session, fechaDesde, fechaHasta, motivo, horaEntrada, horaSalida);
