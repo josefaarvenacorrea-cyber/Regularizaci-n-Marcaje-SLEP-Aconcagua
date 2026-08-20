@@ -4,14 +4,19 @@
 // completo). Módulo compartido: lo usan tanto las rutas de API (validación
 // autoritativa) como los componentes de UI (estado derivado).
 
-export type Motivo = { v: string; hora?: boolean; obs?: boolean; requiereMarca?: boolean };
+export type Motivo = { v: string; hora?: boolean; obs?: boolean; requiereMarca?: boolean; oculto?: boolean };
 
 export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
   falta: [
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas técnicos en dispositivos de marcaje', hora: true, obs: true },
     { v: 'Salida por emergencia o fuerza mayor', hora: true, obs: true },
-    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
+    { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    // Usado solo por la regularización masiva de la puesta en marcha del
+    // reloj control (un hecho único, no algo que vuelva a pasar): no se
+    // ofrece en el menú de motivos, pero sigue siendo un motivo válido para
+    // que esos casos ya regularizados cuenten correctamente como resueltos.
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
   atraso: [
@@ -21,7 +26,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     // El permiso gremial no exime de marcar: si el caso no tiene una marca de
     // entrada real (columna "Entró" del reloj control), este motivo no basta.
     { v: 'Permiso Gremial', requiereMarca: true },
-    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
+    { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
   inasistencia: [
@@ -30,7 +36,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
     { v: 'Permiso Gremial' },
-    { v: 'Pruebas por instalación de reloj de marcación', hora: true },
+    { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
 };
@@ -75,6 +82,13 @@ export function grupo(tipo: string): 'falta' | 'atraso' | 'inasistencia' {
 
 export function motivosDe(tipo: string): Motivo[] {
   return CATALOGO[grupo(tipo)];
+}
+
+// Igual que motivosDe, pero sin los motivos "ocultos" (los reservados para
+// herramientas administrativas puntuales) — esta es la lista que se le debe
+// mostrar a una jefatura para elegir manualmente.
+export function motivosVisibles(tipo: string): Motivo[] {
+  return motivosDe(tipo).filter((m) => !m.oculto);
 }
 
 export function pide(tipo: string): { e: boolean; s: boolean } {
