@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
-type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
+type DemoLogin = { nombre: string; correo: string; clave: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
 
-export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promise<string | null> }) {
+export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: string) => Promise<string | null> }) {
   const [correo, setCorreo] = useState('');
+  const [clave, setClave] = useState('');
   const [error, setError] = useState('');
   const [demoLogins, setDemoLogins] = useState<DemoLogin[]>([]);
   const [enviando, setEnviando] = useState(false);
@@ -15,9 +16,9 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
     api.get<{ demoLogins: DemoLogin[] }>('/api/auth/demo').then((r) => setDemoLogins(r.demoLogins)).catch(() => {});
   }, []);
 
-  async function entrar(c: string) {
+  async function entrar(c: string, cl: string) {
     setEnviando(true);
-    const err = await onEntrar(c);
+    const err = await onEntrar(c, cl);
     setEnviando(false);
     setError(err || '');
   }
@@ -40,8 +41,8 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
         <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Regularización de marcajes</h6>
         <h1 style={{ fontSize: 40, margin: '0 0 12px', maxWidth: '22ch' }}>Justifique las inconsistencias de marcaje de su equipo</h1>
         <p className="text-muted" style={{ fontSize: 15, maxWidth: '52ch' }}>
-          Ingrese con su correo institucional. Si tiene funcionarios a cargo verá los casos de su equipo según la dotación
-          efectiva vigente; si no, verá sus propias inconsistencias.
+          Ingrese con su correo institucional y su contraseña (los primeros 4 dígitos de su RUT). Si tiene funcionarios a
+          cargo verá los casos de su equipo según la dotación efectiva vigente; si no, verá sus propias inconsistencias.
         </p>
         <div className="field" style={{ marginTop: 24, maxWidth: 400 }}>
           <label>Correo institucional</label>
@@ -51,11 +52,22 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
             placeholder="nombre.apellido@slepaconcagua.gob.cl"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && entrar(correo)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar(correo, clave)}
+          />
+        </div>
+        <div className="field" style={{ marginTop: 14, maxWidth: 400 }}>
+          <label>Contraseña</label>
+          <input
+            className="input"
+            type="password"
+            placeholder="Primeros 4 dígitos de su RUT"
+            value={clave}
+            onChange={(e) => setClave(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && entrar(correo, clave)}
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
-          <button type="button" className="btn btn-primary blueprint" onClick={() => entrar(correo)} disabled={enviando} style={{ padding: '10px 22px' }}>
+          <button type="button" className="btn btn-primary blueprint" onClick={() => entrar(correo, clave)} disabled={enviando} style={{ padding: '10px 22px' }}>
             <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             Entrar
           </button>
@@ -73,7 +85,7 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string) => Promis
               <button
                 key={d.correo}
                 type="button"
-                onClick={() => entrar(d.correo)}
+                onClick={() => entrar(d.correo, d.clave)}
                 style={{ textAlign: 'left', border: 0, background: 'var(--color-bg)', padding: '9px 11px', cursor: 'pointer', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'baseline' }}>
