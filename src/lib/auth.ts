@@ -2,11 +2,18 @@ import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getConfig, loadDotacion } from './casos';
-import { key as normKey } from './reglas';
+import { getConfig, getLoginIntentos, limpiarIntentosLogin, loadDotacion, registrarIntentoFallido } from './casos';
+import { key as normKey, normRut } from './reglas';
 
 const COOKIE_NAME = 'regmarcajes_session';
 const MAX_AGE_SECONDS = 60 * 60 * 12; // 12h
+
+// Contraseña corta (4 dígitos) a propósito, para que cualquier funcionario
+// la recuerde sin tener que gestionar una clave nueva: son los primeros 4
+// dígitos de su RUT. Por eso el bloqueo tras varios intentos fallidos es
+// importante — sin él, esas 10.000 combinaciones se prueban todas en segundos.
+const LOGIN_MAX_INTENTOS = 5;
+const LOGIN_BLOQUEO_MIN = 15;
 
 // En producción (Vercel u otro entorno serverless) cada invocación puede
 // caer en una instancia distinta sin disco compartido, así que el secreto
@@ -85,9 +92,26 @@ async function adminCorreos(): Promise<string[]> {
   return raw.split(',').map((c) => c.trim().toLowerCase());
 }
 
-export async function resolveLogin(correoRaw: string): Promise<{ session: Session } | { error: string }> {
+// Primeros 4 dígitos del RUT (sin puntos ni guion) — la contraseña de
+// jefaturas y funcionarios. Si el RUT en la dotación viene incompleto o
+// vacío, devuelve '' y esa cuenta directamente no va a poder entrar hasta
+// que se corrija el dato (no hay una clave "por defecto" insegura).
+function claveEsperadaDeRut(rut: string): string {
+  const digitos = normRut(rut).slice(0, 4);
+  return digitos.length === 4 ? digitos : '';
+}
+
+export async function resolveLogin(correoRaw: string, claveRaw: string): Promise<{ session: Session } | { error: string }> {
   const c = normKey(correoRaw);
   if (!c) return { error: 'Ingrese su correo institucional.' };
+  const clave = String(claveRaw || '').trim();
+  if (!clave) return { error: 'Ingrese su contraseña.' };
+
+  const intentos = await getLoginIntentos(c);
+  if (intentos.bloqueadoHasta && intentos.bloqueadoHasta > new Date().toISOString()) {
+    const minutos = Math.max(1, Math.ceil((new Date(intentos.bloqueadoHasta).getTime() - Date.now()) / 60000));
+    return { error: `Demasiados intentos fallidos. Intente de nuevo en ${minutos} minuto${minutos === 1 ? '' : 's'}.` };
+  }
 
   // La comparación se hace en JS (no con LOWER() en SQL) porque `key()`
   // también quita acentos — muy frecuente en nombres chilenos (Martínez,
@@ -98,6 +122,15 @@ export async function resolveLogin(correoRaw: string): Promise<{ session: Sessio
 
   const admins = await adminCorreos();
   if (admins.includes(c)) {
+    const claveAdmin = process.env.ADMIN_PASSWORD;
+    if (!claveAdmin) {
+      return { error: 'La cuenta de administrador no tiene contraseña configurada (falta la variable de entorno ADMIN_PASSWORD).' };
+    }
+    if (clave !== claveAdmin) {
+      await registrarIntentoFallido(c, LOGIN_MAX_INTENTOS, LOGIN_BLOQUEO_MIN);
+      return { error: 'Contraseña incorrecta.' };
+    }
+    await limpiarIntentosLogin(c);
     return {
       session: {
         correo: correoRaw,
@@ -109,6 +142,13 @@ export async function resolveLogin(correoRaw: string): Promise<{ session: Sessio
     };
   }
   if (!ficha) return { error: 'Ese correo no está en la dotación efectiva vigente.' };
+
+  const claveEsperada = claveEsperadaDeRut(ficha.rut);
+  if (!claveEsperada || clave !== claveEsperada) {
+    await registrarIntentoFallido(c, LOGIN_MAX_INTENTOS, LOGIN_BLOQUEO_MIN);
+    return { error: 'Contraseña incorrecta.' };
+  }
+  await limpiarIntentosLogin(c);
 
   const esJefatura = dot.some((d) => normKey(d.jefatura) === normKey(ficha.nombre));
   if (esJefatura) {
