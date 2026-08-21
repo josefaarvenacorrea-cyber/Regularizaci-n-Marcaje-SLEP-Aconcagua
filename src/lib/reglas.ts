@@ -11,6 +11,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas técnicos en dispositivos de marcaje', hora: true, obs: true },
     { v: 'Salida por emergencia o fuerza mayor', hora: true, obs: true },
+    { v: 'Salida a terreno', hora: true, requiereRespaldo: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     // Usado solo por la regularización masiva de la puesta en marcha del
     // reloj control (un hecho único, no algo que vuelva a pasar): no se
