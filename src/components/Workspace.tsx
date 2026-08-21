@@ -136,9 +136,9 @@ export function Workspace() {
     }
   }, [session, verHuerfanos, fetchCasos, fetchResumen, fetchRegistro]);
 
-  async function entrar(correo: string): Promise<string | null> {
+    async function entrar(correo: string, clave: string): Promise<string | null> {
     try {
-      const r = await api.post<{ session: Session }>('/api/auth/login', { correo });
+      const r = await api.post<{ session: Session }>('/api/auth/login', { correo, clave });
       setSession(r.session);
       setVerHuerfanos(false);
       setFiltroJefaturaActivo(null);
