@@ -105,6 +105,23 @@ export async function getConfig(): Promise<Record<string, string>> {
   return out;
 }
 
+// Contraseña propia que la persona eligió al reemplazar la temporal (los
+// primeros 4 dígitos de su RUT). Mientras no exista una fila acá, el login
+// sigue aceptando la temporal y obliga a cambiarla; una vez que la elige, la
+// temporal deja de servir.
+export async function getClaveCustom(correo: string): Promise<string | null> {
+  const row = await queryOne<{ clave_hash: string }>('SELECT clave_hash FROM login_claves WHERE correo = $1', [correo]);
+  return row?.clave_hash ?? null;
+}
+
+export async function setClaveCustom(correo: string, claveHash: string): Promise<void> {
+  const now = new Date().toISOString();
+  await execute(
+    `INSERT INTO login_claves (correo, clave_hash, actualizado_en) VALUES ($1,$2,$3)
+     ON CONFLICT (correo) DO UPDATE SET clave_hash = EXCLUDED.clave_hash, actualizado_en = EXCLUDED.actualizado_en`,
+    [correo, claveHash, now]
+  );
+}
 export async function getConfigBool(k: string, def = false): Promise<boolean> {
   const cfg = await getConfig();
   const v = cfg[k];
