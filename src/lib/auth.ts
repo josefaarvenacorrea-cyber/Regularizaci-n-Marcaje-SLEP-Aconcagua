@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getConfig, getLoginIntentos, limpiarIntentosLogin, loadDotacion, registrarIntentoFallido } from './casos';
+import { getClaveCustom, getConfig, getLoginIntentos, limpiarIntentosLogin, loadDotacion, registrarIntentoFallido, setClaveCustom } from './casos';
 import { key as normKey, normRut } from './reglas';
 
 const COOKIE_NAME = 'regmarcajes_session';
@@ -12,8 +12,12 @@ const MAX_AGE_SECONDS = 60 * 60 * 12; // 12h
 // la recuerde sin tener que gestionar una clave nueva: son los primeros 4
 // dígitos de su RUT. Por eso el bloqueo tras varios intentos fallidos es
 // importante — sin él, esas 10.000 combinaciones se prueban todas en segundos.
+// La temporal solo sirve una vez: al entrar con ella, `resolveLogin` marca
+// `debeCambiarClave` y el resto de la app queda bloqueado hasta que la
+// cambie por una propia (ver `cambiarClavePropia`).
 const LOGIN_MAX_INTENTOS = 5;
 const LOGIN_BLOQUEO_MIN = 15;
+const CLAVE_MIN_LARGO = 4;
 
 // En producción (Vercel u otro entorno serverless) cada invocación puede
 // caer en una instancia distinta sin disco compartido, así que el secreto
@@ -36,10 +40,35 @@ function getSecret(): string {
   }
 }
 
-export type Session = { correo: string; rol: 'admin' | 'jefatura' | 'funcionario'; nombre: string; rut: string; iat: number };
+export type Session = {
+  correo: string;
+  rol: 'admin' | 'jefatura' | 'funcionario';
+  nombre: string;
+  rut: string;
+  iat: number;
+  // true solo mientras la persona sigue usando la contraseña temporal (los
+  // primeros 4 dígitos de su RUT): el resto de la app queda bloqueado detrás
+  // de la pantalla de cambio de contraseña hasta que elija una propia. La
+  // cuenta de administrador nunca la tiene en true (su contraseña es fija,
+  // definida en ADMIN_PASSWORD, no basada en un RUT).
+  debeCambiarClave: boolean;
+};
 
 function sign(payload: string): string {
   return crypto.createHmac('sha256', getSecret()).update(payload).digest('base64url');
+}
+
+// Hash con clave (HMAC, no un hash plano) para no guardar la contraseña
+// elegida en texto plano en la base — reutiliza el mismo secreto que ya
+// firma la cookie de sesión en vez de agregar otro más para gestionar.
+function hashClave(clave: string): string {
+  return crypto.createHmac('sha256', getSecret()).update(clave).digest('hex');
+}
+
+function clavesCoinciden(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
 }
 
 export function encodeSession(s: Session): string {
@@ -138,28 +167,59 @@ export async function resolveLogin(correoRaw: string, claveRaw: string): Promise
         nombre: ficha ? ficha.nombre : 'Gestión de Personas',
         rut: ficha?.rut ?? '',
         iat: Math.floor(Date.now() / 1000),
+        debeCambiarClave: false,
       },
     };
   }
   if (!ficha) return { error: 'Ese correo no está en la dotación efectiva vigente.' };
 
-  const claveEsperada = claveEsperadaDeRut(ficha.rut);
-  if (!claveEsperada || clave !== claveEsperada) {
-    await registrarIntentoFallido(c, LOGIN_MAX_INTENTOS, LOGIN_BLOQUEO_MIN);
-    return { error: 'Contraseña incorrecta.' };
+  // Una vez que la persona elige su propia contraseña, la temporal (RUT) deja
+  // de servir — si no, "cambiarla" no cambiaría nada real.
+  const claveCustom = await getClaveCustom(c);
+  let debeCambiarClave = false;
+  if (claveCustom) {
+    if (!clavesCoinciden(hashClave(clave), claveCustom)) {
+      await registrarIntentoFallido(c, LOGIN_MAX_INTENTOS, LOGIN_BLOQUEO_MIN);
+      return { error: 'Contraseña incorrecta.' };
+    }
+  } else {
+    const claveEsperada = claveEsperadaDeRut(ficha.rut);
+    if (!claveEsperada || clave !== claveEsperada) {
+      await registrarIntentoFallido(c, LOGIN_MAX_INTENTOS, LOGIN_BLOQUEO_MIN);
+      return { error: 'Contraseña incorrecta.' };
+    }
+    debeCambiarClave = true;
   }
   await limpiarIntentosLogin(c);
 
   const esJefatura = dot.some((d) => normKey(d.jefatura) === normKey(ficha.nombre));
   if (esJefatura) {
     return {
-      session: { correo: correoRaw, rol: 'jefatura', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000) },
+      session: { correo: correoRaw, rol: 'jefatura', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000), debeCambiarClave },
     };
   }
   // No tiene gente a cargo: entra en modo funcionario, de solo lectura, a ver
   // sus propias inconsistencias (nunca puede editar nada — eso sigue siendo
   // exclusivo de su jefatura).
   return {
-    session: { correo: correoRaw, rol: 'funcionario', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000) },
+    session: { correo: correoRaw, rol: 'funcionario', nombre: ficha.nombre, rut: ficha.rut, iat: Math.floor(Date.now() / 1000), debeCambiarClave },
   };
+}
+
+// Reemplaza la contraseña temporal (o la anterior) por una elegida por la
+// propia persona, y devuelve una sesión nueva con `debeCambiarClave: false`
+// para que la ruta la vuelva a firmar en la cookie — la sesión vieja quedó
+// marcada como pendiente de cambio y no sirve para desbloquear el resto de
+// la app.
+export async function cambiarClavePropia(session: Session, claveNuevaRaw: string): Promise<{ session: Session } | { error: string }> {
+  if (session.rol === 'admin') {
+    return { error: 'La cuenta de administrador no cambia su contraseña por acá.' };
+  }
+  const claveNueva = String(claveNuevaRaw || '').trim();
+  if (claveNueva.length < CLAVE_MIN_LARGO) {
+    return { error: `La contraseña debe tener al menos ${CLAVE_MIN_LARGO} caracteres.` };
+  }
+  const c = normKey(session.correo);
+  await setClaveCustom(c, hashClave(claveNueva));
+  return { session: { ...session, debeCambiarClave: false } };
 }
