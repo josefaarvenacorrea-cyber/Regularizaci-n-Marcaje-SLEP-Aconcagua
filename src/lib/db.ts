@@ -109,9 +109,15 @@ async function ensureSchema(pool: Pool) {
       value TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS meta (
+       CREATE TABLE IF NOT EXISTS meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS login_intentos (
+      correo TEXT PRIMARY KEY,
+      fallidos INTEGER NOT NULL DEFAULT 0,
+      bloqueado_hasta TEXT NOT NULL DEFAULT ''
     );
   `);
 }
