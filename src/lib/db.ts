@@ -120,6 +120,11 @@ async function ensureSchema(pool: Pool) {
       bloqueado_hasta TEXT NOT NULL DEFAULT ''
     );
   `);
+      CREATE TABLE IF NOT EXISTS login_claves (
+      correo TEXT PRIMARY KEY,
+      clave_hash TEXT NOT NULL,
+      actualizado_en TEXT NOT NULL DEFAULT ''
+    );
 }
 
 // Garantiza que el esquema exista antes de la primera consulta de este
