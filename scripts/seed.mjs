@@ -85,6 +85,7 @@ async function main() {
         CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS login_intentos (correo TEXT PRIMARY KEY, fallidos INTEGER NOT NULL DEFAULT 0, bloqueado_hasta TEXT NOT NULL DEFAULT '');
+    CREATE TABLE IF NOT EXISTS login_claves (correo TEXT PRIMARY KEY, clave_hash TEXT NOT NULL, actualizado_en TEXT NOT NULL DEFAULT '');
   `);
 
   const dotacionRaw = readGlobalArray(path.join(PROJECT_DIR, 'dotacion.js'), 'DOTACION');
