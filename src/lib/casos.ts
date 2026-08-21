@@ -70,6 +70,34 @@ export type Caso = {
   confirmada: boolean;
 };
 
+export type LoginIntentos = { fallidos: number; bloqueadoHasta: string };
+
+// Estado de intentos fallidos de login, por correo (clave normalizada en
+// minúsculas por quien llama). Sirve para bloquear una cuenta un rato
+// después de varios intentos seguidos — la contraseña es corta (4 dígitos),
+// así que sin esto un script podría probarlas todas en segundos.
+export async function getLoginIntentos(correo: string): Promise<LoginIntentos> {
+  const row = await queryOne<{ fallidos: number; bloqueado_hasta: string }>(
+    'SELECT fallidos, bloqueado_hasta FROM login_intentos WHERE correo = $1',
+    [correo]
+  );
+  return { fallidos: row?.fallidos ?? 0, bloqueadoHasta: row?.bloqueado_hasta ?? '' };
+}
+
+export async function registrarIntentoFallido(correo: string, maxIntentos: number, bloqueoMinutos: number): Promise<void> {
+  const actual = await getLoginIntentos(correo);
+  const fallidos = actual.fallidos + 1;
+  const bloqueadoHasta = fallidos >= maxIntentos ? new Date(Date.now() + bloqueoMinutos * 60000).toISOString() : actual.bloqueadoHasta;
+  await execute(
+    `INSERT INTO login_intentos (correo, fallidos, bloqueado_hasta) VALUES ($1,$2,$3)
+     ON CONFLICT (correo) DO UPDATE SET fallidos = EXCLUDED.fallidos, bloqueado_hasta = EXCLUDED.bloqueado_hasta`,
+    [correo, fallidos, bloqueadoHasta]
+  );
+}
+
+export async function limpiarIntentosLogin(correo: string): Promise<void> {
+  await execute('DELETE FROM login_intentos WHERE correo = $1', [correo]);
+}
 export async function getConfig(): Promise<Record<string, string>> {
   const rows = await query<{ key: string; value: string }>('SELECT key, value FROM config');
   const out: Record<string, string> = {};
