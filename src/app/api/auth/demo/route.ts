@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 import { allCasos, getConfig, loadDotacion } from '@/lib/casos';
-import { key } from '@/lib/reglas';
+import { key, normRut } from '@/lib/reglas';
+
+// Misma fórmula que auth.ts (primeros 4 dígitos del RUT): al panel de
+// pruebas le sirve traer ya calculada la clave de cada acceso, para que un
+// clic entre directo sin tener que copiarla a mano. Solo existe en
+// desarrollo (ver el corte de process.env.NODE_ENV más abajo), así que esto
+// nunca queda expuesto en producción.
+function claveDemo(rut: string): string {
+  return normRut(rut).slice(0, 4);
+}
 
 const DEMO_BASE = [
   'Yasna Anaquina Flos Jara',
@@ -30,20 +39,21 @@ export async function GET() {
   const jefaturas = new Set(dot.map((d) => key(d.jefatura || '')).filter(Boolean));
   const funcionario = dot.find((d) => d.correo && !jefaturas.has(key(d.nombre)));
 
-  type DemoLogin = { nombre: string; correo: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
+  type DemoLogin = { nombre: string; correo: string; clave: string; etiqueta: string; rol: 'admin' | 'jefatura' | 'funcionario' };
   const demoLogins: DemoLogin[] = [
     ...DEMO_BASE.map((nom): DemoLogin => {
       const f = dot.find((d) => key(d.nombre) === key(nom));
       return {
         nombre: nom,
         correo: f?.correo || '—',
+        clave: claveDemo(f?.rut || ''),
         etiqueta: (conteo.get(key(nom)) || 0) + ' casos',
         rol: 'jefatura',
       };
     }),
-    { nombre: 'Gestión de Personas (administración)', correo: admin, etiqueta: 'Admin', rol: 'admin' },
+    { nombre: 'Gestión de Personas (administración)', correo: admin, clave: process.env.ADMIN_PASSWORD || '', etiqueta: 'Admin', rol: 'admin' },
     ...(funcionario
-      ? [{ nombre: funcionario.nombre, correo: funcionario.correo, etiqueta: 'Funcionario (solo lectura)', rol: 'funcionario' as const }]
+      ? [{ nombre: funcionario.nombre, correo: funcionario.correo, clave: claveDemo(funcionario.rut), etiqueta: 'Funcionario (solo lectura)', rol: 'funcionario' as const }]
       : []),
   ];
 
