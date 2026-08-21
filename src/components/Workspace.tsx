@@ -6,6 +6,7 @@ import type { Session } from '@/lib/auth';
 import type { Caso } from '@/lib/casos';
 import { key as normKey } from '@/lib/reglas';
 import { LoginScreen } from './LoginScreen';
+import { CambiarClave } from './CambiarClave';
 import { Header, type TabDef } from './Header';
 import { CargaBase } from './CargaBase';
 import { PanelAvance, type JefaturaResumen } from './PanelAvance';
@@ -126,8 +127,8 @@ export function Workspace() {
     fetchSession();
   }, [fetchSession]);
 
-  useEffect(() => {
-    if (!session) return;
+    useEffect(() => {
+    if (!session || session.debeCambiarClave) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCasos(session.rol === 'admin' && verHuerfanos);
     if (session.rol === 'admin') {
@@ -280,8 +281,12 @@ export function Workspace() {
     return <div style={{ padding: 60, textAlign: 'center' }} className="text-muted">Cargando…</div>;
   }
 
-  if (!session) {
+    if (!session) {
     return <LoginScreen onEntrar={entrar} />;
+  }
+
+  if (session.debeCambiarClave) {
+    return <CambiarClave onCambiada={(s) => setSession(s)} onSalir={salir} />;
   }
 
   if (session.rol === 'funcionario') {
