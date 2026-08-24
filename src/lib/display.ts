@@ -22,9 +22,12 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
   // regularización masiva) que ya no se ofrece para elegir — hay que poder
   // encontrarlo igual para calcular completa/hora habilitada correctamente,
   // aunque no aparezca en el menú desplegable.
-  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
+    const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
   const motivosMenu = motivosVisibles(c.tipo, esAdmin);
-  const p = pide(c.tipo);
+  // Igual que en completa(): un motivo con ambasHoras (p. ej. trabajo
+  // remoto) siempre pide entrada y salida, sin importar qué pida el tipo de
+  // inconsistencia por defecto.
+  const p = m?.ambasHoras ? { e: true, s: true } : pide(c.tipo);
   const estado = { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio, respaldos: c.respaldos };
   const hab = calcHoraHabilitada(estado, horaSoloOlvido);
   const mk = marcas(c.tipo, c.entro, c.salio);
