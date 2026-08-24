@@ -4,7 +4,19 @@
 // completo). Módulo compartido: lo usan tanto las rutas de API (validación
 // autoritativa) como los componentes de UI (estado derivado).
 
-export type Motivo = { v: string; hora?: boolean; obs?: boolean; requiereMarca?: boolean; requiereRespaldo?: boolean; oculto?: boolean };
+export type Motivo = {
+  v: string;
+  hora?: boolean;
+  obs?: boolean;
+  requiereMarca?: boolean;
+  requiereRespaldo?: boolean;
+  oculto?: boolean;
+  // A diferencia de `oculto` (nunca aparece para nadie, reservado para
+  // herramientas administrativas puntuales), este solo se oculta del menú de
+  // las jefaturas — el admin sí lo ve y lo puede elegir. Para casos que solo
+  // Gestión de Personas debe poder regularizar directamente.
+  soloAdmin?: boolean;
+};
 
 export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
   falta: [
@@ -13,6 +25,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Salida por emergencia o fuerza mayor', hora: true, obs: true },
     { v: 'Salida a terreno', hora: true, requiereRespaldo: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     // Usado solo por la regularización masiva de la puesta en marcha del
     // reloj control (un hecho único, no algo que vuelva a pasar): no se
     // ofrece en el menú de motivos, pero sigue siendo un motivo válido para
@@ -20,7 +33,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
-    atraso: [
+  atraso: [
     { v: 'Permiso', requiereRespaldo: true },
     { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
     { v: 'Horas Compensatorias', requiereRespaldo: true },
@@ -30,6 +43,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
@@ -38,12 +52,12 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Horas Compensatorias', requiereRespaldo: true },
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
-    { v: 'Permiso Gremial', requiereRespaldo: true },
+    { v: 'Permiso Gremial' },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
+    { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
-  ],
-};
+  ]
 
 export const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 export const MESES = [
