@@ -16,6 +16,12 @@ export type Motivo = {
   // las jefaturas — el admin sí lo ve y lo puede elegir. Para casos que solo
   // Gestión de Personas debe poder regularizar directamente.
   soloAdmin?: boolean;
+  // Por defecto qué hora se pide depende del tipo de inconsistencia (p. ej.
+  // "Falta Salida" solo pide la hora de salida) — esta bandera lo pasa por
+  // encima y exige siempre ambas horas, sin importar el tipo. Pensado para
+  // motivos donde igual hay que dejar registrada la jornada completa (p. ej.
+  // trabajo remoto).
+  ambasHoras?: boolean;
 };
 
 export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
@@ -25,6 +31,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Salida por emergencia o fuerza mayor', hora: true, obs: true },
     { v: 'Salida a terreno', hora: true, requiereRespaldo: true },
     { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
+    { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     // Usado solo por la regularización masiva de la puesta en marcha del
@@ -44,6 +51,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Problemas Técnicos en Dispositivos de Marcaje', hora: true, obs: true },
     { v: 'Olvido Involuntario', hora: true },
     { v: 'Salida a terreno', hora: true, requiereRespaldo: true },
+    { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
@@ -57,6 +65,7 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Permiso Gremial' },
     { v: 'Salida a terreno', hora: true, requiereRespaldo: true },
     { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
+    { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
@@ -223,7 +232,7 @@ export function completa(c: CasoEstado, horaSoloOlvido: boolean): boolean {
   if (m.requiereMarca && marcas(c.tipo, c.entro ?? null, c.salio ?? null).e === 'sin marca') return false;
   if (m.requiereRespaldo && (c.respaldos ?? 0) < 1) return false;
   if (horaHabilitada(c, horaSoloOlvido)) {
-    const p = pide(c.tipo);
+    const p = m.ambasHoras ? { e: true, s: true } : pide(c.tipo);
     if (p.e && !c.entradaReal) return false;
     if (p.s && !c.salidaReal) return false;
   }
