@@ -451,6 +451,33 @@ export async function regularizarMasivoParaJefatura(
   }
   return { afectados };
 }
+export type ResultadoCorreccionIngreso = { eliminados: number; regularizados: number };
+
+// Para cuando a alguien le quedan inconsistencias de antes de su fecha real
+// de ingreso (dato mal depurado en una carga anterior: la persona aparece en
+// el reloj control desde antes de existir en el servicio). Elimina esas
+// filas previas a la fecha de ingreso (no son inconsistencias reales, son
+// datos que no debieron cargarse) y regulariza automáticamente el día de
+// ingreso mismo como "primer día" — mismo criterio que ya se usa en el resto
+// de la app para gente recién enrolada en el reloj.
+export async function corregirIngresoFuncionario(rut: string, fechaIngreso: string): Promise<ResultadoCorreccionIngreso> {
+  const eliminados = await execute('DELETE FROM inconsistencias WHERE rut = $1 AND fecha < $2', [rut, fechaIngreso]);
+
+  const motivo = 'Primer día de trabajo (aún no enrolado en el reloj de marcación)';
+  const now = new Date().toISOString();
+  const rows = await query<IncRow>('SELECT * FROM inconsistencias WHERE rut = $1 AND fecha = $2 AND confirmada = false', [rut, fechaIngreso]);
+  let regularizados = 0;
+  for (const r of rows) {
+    const p = pide(r.tipo);
+    await execute(
+      `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
+      [motivo, p.e ? '08:00' : '', p.s ? '17:00' : '', now, r.id]
+    );
+    regularizados++;
+  }
+  return { eliminados, regularizados };
+}
+
 export type JefaturaResumen = {
   nombre: string;
   correo: string;
