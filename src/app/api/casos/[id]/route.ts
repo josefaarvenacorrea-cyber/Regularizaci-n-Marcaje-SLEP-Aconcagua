@@ -50,11 +50,17 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     if (row.confirmada) {
       return NextResponse.json({ error: 'Este caso ya fue enviado. Use «Deshacer» para editarlo de nuevo.' }, { status: 400 });
     }
-    const updates: Record<string, string> = {};
+        const updates: Record<string, string> = {};
     if (typeof body.motivo === 'string') {
-      const validos = motivosDe(row.tipo).map((m) => m.v);
-      if (body.motivo !== '' && !validos.includes(body.motivo)) {
+      const motivos = motivosDe(row.tipo);
+      const elegido = motivos.find((m) => m.v === body.motivo);
+      if (body.motivo !== '' && !elegido) {
         return NextResponse.json({ error: 'Motivo no permitido para este tipo de inconsistencia' }, { status: 400 });
+      }
+      // No solo oculto en el menú: una jefatura tampoco puede forzarlo a mano
+      // armando el request — este motivo es exclusivo de Gestión de Personas.
+      if (elegido?.soloAdmin && session.rol !== 'admin') {
+        return NextResponse.json({ error: 'Ese motivo solo puede usarlo el administrador.' }, { status: 403 });
       }
       updates.motivo = body.motivo;
       // Igual que el prototipo: cambiar el motivo reinicia las horas capturadas.
