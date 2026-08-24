@@ -91,7 +91,7 @@ export function RevisionRapida({
 
         <div className="text-muted" style={{ fontSize: 12, marginBottom: 7 }}>Motivos permitidos para {d.tipo}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {motivosVisibles(d.tipo).map((m) => (
+            {motivosVisibles(d.tipo, false).map((m) => (
             <button
               key={m.v}
               type="button"
