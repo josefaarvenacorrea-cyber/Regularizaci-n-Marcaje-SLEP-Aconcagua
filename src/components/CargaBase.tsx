@@ -181,6 +181,69 @@ function RegularizacionMasiva({ onRegularizado }: { onRegularizado: () => void }
   );
 }
 
+function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
+  const [rut, setRut] = useState('');
+  const [fechaIngreso, setFechaIngreso] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [procesando, setProcesando] = useState(false);
+
+  async function corregir() {
+    if (!rut.trim() || !fechaIngreso) {
+      setMensaje('Complete el RUT y la fecha de ingreso.');
+      return;
+    }
+    const ok = window.confirm(
+      'Esto va a eliminar todas las inconsistencias de ' +
+        rut +
+        ' anteriores al ' +
+        fechaIngreso +
+        ', y regularizar automáticamente el ' +
+        fechaIngreso +
+        ' como primer día. ¿Confirma?'
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ eliminados: number; regularizados: number }>('/api/admin/corregir-ingreso', { rut, fechaIngreso });
+      setMensaje(
+        r.eliminados + ' inconsistencias anteriores al ' + fechaIngreso + ' fueron eliminadas, y ' + r.regularizados + ' casos del día de ingreso quedaron regularizados como primer día.'
+      );
+      onCorregido();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo corregir.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Corrección: inconsistencias de antes del ingreso</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
+        Para cuando a alguien le quedan inconsistencias de fechas anteriores a su ingreso real al servicio (datos que no
+        se depuraron bien en una carga anterior). Elimina las inconsistencias de esa persona de antes de la fecha que
+        indique, y regulariza automáticamente el día de ingreso como &ldquo;Primer día de trabajo&rdquo;.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 12.5 }}>
+          RUT de la persona
+          <input type="text" placeholder="12.345.678-9" value={rut} onChange={(e) => setRut(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Fecha de ingreso
+          <input type="date" value={fechaIngreso} onChange={(e) => setFechaIngreso(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <button type="button" className="btn btn-secondary" onClick={corregir} disabled={procesando}>
+          {procesando ? 'Corrigiendo…' : 'Corregir'}
+        </button>
+      </div>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 export function CargaBase({
   periodo,
   origen,
@@ -273,6 +336,7 @@ export function CargaBase({
 
       <CorreccionAtraso onCorregido={onCargada} />
       <RegularizacionMasiva onRegularizado={onCargada} />
+      <CorreccionIngreso onCorregido={onCargada} />
     </main>
   );
 }
