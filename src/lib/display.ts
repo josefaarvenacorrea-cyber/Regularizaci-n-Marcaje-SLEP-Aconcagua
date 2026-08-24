@@ -23,7 +23,7 @@ export function casoDisplay(c: Caso, horaSoloOlvido: boolean, esAdmin: boolean) 
   // encontrarlo igual para calcular completa/hora habilitada correctamente,
   // aunque no aparezca en el menú desplegable.
   const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
-  const motivosMenu = motivosVisibles(c.tipo);
+  const motivosMenu = motivosVisibles(c.tipo, esAdmin);
   const p = pide(c.tipo);
   const estado = { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio, respaldos: c.respaldos };
   const hab = calcHoraHabilitada(estado, horaSoloOlvido);
