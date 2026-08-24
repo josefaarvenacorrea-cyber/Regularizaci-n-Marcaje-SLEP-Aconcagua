@@ -31,9 +31,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     // ofrece en el menú de motivos, pero sigue siendo un motivo válido para
     // que esos casos ya regularizados cuenten correctamente como resueltos.
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
-        { v: 'Autorizar el descuento' },
+    { v: 'Autorizar el descuento' },
   ],
-};
   atraso: [
     { v: 'Permiso', requiereRespaldo: true },
     { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
@@ -58,7 +57,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
-  ]
+  ],
+};
 
 export const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 export const MESES = [
@@ -102,9 +102,11 @@ export function motivosDe(tipo: string): Motivo[] {
   return CATALOGO[grupo(tipo)];
 }
 
-// Igual que motivosDe, pero sin los motivos "ocultos" (los reservados para
-// herramientas administrativas puntuales) — esta es la lista que se le debe
-// mostrar a una jefatura para elegir manualmente.
+// Igual que motivosDe, pero sin los motivos "ocultos" (reservados para
+// herramientas administrativas puntuales, nunca elegibles a mano) ni,
+// a menos que quien pregunta sea el admin, los "soloAdmin" — esta es la
+// lista que se le debe mostrar a una jefatura (o al admin) para elegir
+// manualmente.
 export function motivosVisibles(tipo: string, esAdmin: boolean): Motivo[] {
   return motivosDe(tipo).filter((m) => !m.oculto && (esAdmin || !m.soloAdmin));
 }
@@ -160,105 +162,4 @@ function aMinutos(hora: string | null | undefined): number | null {
 }
 
 // Reclasifica un caso "Atraso" cuya entrada en realidad cae dentro del
-// margen de tolerancia del turno — no es un atraso real. Si además falta la
-// marca de salida, el problema real de ese día es "Falta Salida". Si la
-// salida también está marcada, ese día no tiene ninguna inconsistencia.
-// Devuelve: undefined (no corresponde tocar este caso), null (no es una
-// inconsistencia real, debe eliminarse) o el tipo corregido.
-export function corregirTipoAtraso(tipo: string, turno: string, entro: string | null, salio: string | null): string | null | undefined {
-  if (key(tipo) !== 'atraso') return undefined;
-  const tol = toleranciaDeTurno(turno);
-  const entroMin = aMinutos(entro);
-  if (!tol || entroMin === null) return undefined;
-  if (entroMin > tol.inicioMin + tol.tolMin) return undefined; // atraso real, no cambia
-  return salio ? null : 'Falta Salida';
-}
-
-export type CasoEstado = {
-  tipo: string;
-  motivo: string;
-  entradaReal: string;
-  salidaReal: string;
-  obs: string;
-  entro?: string | null;
-  salio?: string | null;
-  respaldos?: number;
-};
-
-// Mensaje para la vista de solo lectura del funcionario: qué tiene que
-// mandarle a su jefatura por conducto interno para que ella lo regularice
-// acá — el funcionario nunca edita nada directamente.
-export function accionSolicitada(c: { tipo: string; motivo: string; confirmada: boolean }): string {
-  if (c.confirmada) return 'Ya fue regularizada por su jefatura. No necesita hacer nada más.';
-  if (c.motivo) return 'Su jefatura ya está regularizando este caso.';
-  const g = grupo(c.tipo);
-  if (g === 'falta') {
-    const p = pide(c.tipo);
-    if (p.e && p.s) return 'Informe a su jefatura, por conducto interno, las horas reales de entrada y salida de ese día.';
-    if (p.e) return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día.';
-    return 'Informe a su jefatura, por conducto interno, la hora real de salida de ese día.';
-  }
-  if (g === 'atraso') {
-    return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.';
-  }
-  return 'Si tiene un permiso, licencia médica u otro respaldo para esa fecha, entréguelo a su jefatura para que lo regularice.';
-}
-
-export function horaHabilitada(c: CasoEstado, horaSoloOlvido: boolean): boolean {
-  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
-  if (!m || !m.hora) return false;
-  return horaSoloOlvido ? /olvido/.test(key(m.v)) : true;
-}
-
-export function completa(c: CasoEstado, horaSoloOlvido: boolean): boolean {
-  const m = motivosDe(c.tipo).find((x) => x.v === c.motivo);
-  if (!m) return false;
-  if (m.obs && !String(c.obs || '').trim()) return false;
-  if (m.requiereMarca && marcas(c.tipo, c.entro ?? null, c.salio ?? null).e === 'sin marca') return false;
-  if (m.requiereRespaldo && (c.respaldos ?? 0) < 1) return false;
-  if (horaHabilitada(c, horaSoloOlvido)) {
-    const p = pide(c.tipo);
-    if (p.e && !c.entradaReal) return false;
-    if (p.s && !c.salidaReal) return false;
-  }
-  return true;
-}
-
-export function tagClass(tipo: string): string {
-  const t = key(tipo);
-  if (/injustificada|inasistencia/.test(t)) return 'tag-neutral';
-  if (/atraso|adelanto/.test(t)) return 'tag-outline';
-  return 'tag-accent';
-}
-
-export function marcas(tipo: string, entro: string | null, salio: string | null) {
-  const t = key(tipo);
-  const faltaE = /falta entrada|injustificada|inasistencia/.test(t);
-  const faltaS = /falta salida|injustificada|inasistencia/.test(t);
-  return { e: faltaE ? 'sin marca' : entro || 'sin marca', s: faltaS ? 'sin marca' : salio || 'sin marca' };
-}
-
-export function fmtFecha(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  if (isNaN(d.getTime())) return f;
-  return String(d.getDate()).padStart(2, '0') + ' ' + MESES[d.getMonth()].slice(0, 3);
-}
-
-export function diaSemana(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  return isNaN(d.getTime()) ? '' : DIAS[d.getDay()];
-}
-
-export function fechaLarga(f: string): string {
-  const d = new Date(f + 'T00:00:00');
-  if (isNaN(d.getTime())) return f;
-  return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()];
-}
-
-export function slug(s: string): string {
-  return key(s).replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-}
-
-export function nombreArchivo(periodo: string, alcance: string): string {
-  return 'Regularizacion_marcajes_' + slug(periodo) + '_' + slug(alcance) + '.xlsx';
-}
+// margen de tolerancia del turno — no es un atraso real
