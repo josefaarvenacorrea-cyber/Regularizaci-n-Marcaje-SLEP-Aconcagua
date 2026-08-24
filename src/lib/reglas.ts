@@ -104,8 +104,8 @@ export function motivosDe(tipo: string): Motivo[] {
 // Igual que motivosDe, pero sin los motivos "ocultos" (los reservados para
 // herramientas administrativas puntuales) — esta es la lista que se le debe
 // mostrar a una jefatura para elegir manualmente.
-export function motivosVisibles(tipo: string): Motivo[] {
-  return motivosDe(tipo).filter((m) => !m.oculto);
+export function motivosVisibles(tipo: string, esAdmin: boolean): Motivo[] {
+  return motivosDe(tipo).filter((m) => !m.oculto && (esAdmin || !m.soloAdmin));
 }
 
 // A diferencia de motivosDe/completa (que necesitan saber el tipo de
