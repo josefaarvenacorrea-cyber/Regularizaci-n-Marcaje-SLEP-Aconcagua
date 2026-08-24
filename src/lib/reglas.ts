@@ -31,8 +31,9 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     // ofrece en el menú de motivos, pero sigue siendo un motivo válido para
     // que esos casos ya regularizados cuenten correctamente como resueltos.
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
-    { v: 'Autorizar el descuento' },
+        { v: 'Autorizar el descuento' },
   ],
+};
   atraso: [
     { v: 'Permiso', requiereRespaldo: true },
     { v: 'Cometido Funcionario', obs: true, requiereRespaldo: true },
