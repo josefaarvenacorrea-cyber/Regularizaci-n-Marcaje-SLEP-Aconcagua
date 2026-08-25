@@ -99,6 +99,14 @@ export async function limpiarIntentosLogin(correo: string): Promise<void> {
   await execute('DELETE FROM login_intentos WHERE correo = $1', [correo]);
 }
 
+// Reestablece la contraseña de una persona: borra la que había elegido, así
+// vuelve a quedar con la temporal (los primeros 4 dígitos de su RUT) y la
+// app la va a obligar a elegir una nueva al entrar — mismo mecanismo que ya
+// usa cualquiera la primera vez.
+export async function borrarClaveCustom(correo: string): Promise<void> {
+  await execute('DELETE FROM login_claves WHERE correo = $1', [correo]);
+}
+
 // Contraseña propia que la persona eligió al reemplazar la temporal (los
 // primeros 4 dígitos de su RUT). Mientras no exista una fila acá, el login
 // sigue aceptando la temporal y obliga a cambiarla; una vez que la elige, la
