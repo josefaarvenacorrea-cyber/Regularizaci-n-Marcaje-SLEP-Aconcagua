@@ -244,6 +244,55 @@ function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
   );
 }
 
+function RestablecerClave() {
+  const [correo, setCorreo] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [procesando, setProcesando] = useState(false);
+
+  async function restablecer() {
+    if (!correo.trim()) {
+      setMensaje('Ingrese el correo de la persona.');
+      return;
+    }
+    const ok = window.confirm(
+      'Esto va a borrar la contraseña propia de ' + correo + '. Va a volver a entrar con los primeros 4 dígitos de su RUT, y el sistema le va a pedir elegir una nueva. ¿Confirma?'
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ ok: boolean; nombre: string }>('/api/admin/restablecer-clave', { correo });
+      setMensaje('Contraseña reestablecida para ' + r.nombre + '. Ya puede entrar con los primeros 4 dígitos de su RUT.');
+      setCorreo('');
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo reestablecer la contraseña.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Reestablecer contraseña</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
+        Para cuando una jefatura o funcionario olvida su contraseña. Borra la que había elegido y la deja de nuevo con
+        la temporal (los primeros 4 dígitos de su RUT) — al entrar, el sistema la va a obligar a elegir una nueva.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 12.5, flex: '1 1 280px' }}>
+          Correo institucional
+          <input type="email" placeholder="nombre.apellido@slepaconcagua.gob.cl" value={correo} onChange={(e) => setCorreo(e.target.value)} style={{ display: 'block', marginTop: 4, width: '100%' }} />
+        </label>
+        <button type="button" className="btn btn-secondary" onClick={restablecer} disabled={procesando}>
+          {procesando ? 'Reestableciendo…' : 'Reestablecer contraseña'}
+        </button>
+      </div>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 export function CargaBase({
   periodo,
   origen,
@@ -337,6 +386,7 @@ export function CargaBase({
       <CorreccionAtraso onCorregido={onCargada} />
       <RegularizacionMasiva onRegularizado={onCargada} />
       <CorreccionIngreso onCorregido={onCargada} />
+      <RestablecerClave />
     </main>
   );
 }
