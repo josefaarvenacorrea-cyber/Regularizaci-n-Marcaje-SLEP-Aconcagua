@@ -98,12 +98,6 @@ export async function registrarIntentoFallido(correo: string, maxIntentos: numbe
 export async function limpiarIntentosLogin(correo: string): Promise<void> {
   await execute('DELETE FROM login_intentos WHERE correo = $1', [correo]);
 }
-export async function getConfig(): Promise<Record<string, string>> {
-  const rows = await query<{ key: string; value: string }>('SELECT key, value FROM config');
-  const out: Record<string, string> = {};
-  for (const r of rows) out[r.key] = r.value;
-  return out;
-}
 
 // Contraseña propia que la persona eligió al reemplazar la temporal (los
 // primeros 4 dígitos de su RUT). Mientras no exista una fila acá, el login
@@ -122,6 +116,14 @@ export async function setClaveCustom(correo: string, claveHash: string): Promise
     [correo, claveHash, now]
   );
 }
+
+export async function getConfig(): Promise<Record<string, string>> {
+  const rows = await query<{ key: string; value: string }>('SELECT key, value FROM config');
+  const out: Record<string, string> = {};
+  for (const r of rows) out[r.key] = r.value;
+  return out;
+}
+
 export async function getConfigBool(k: string, def = false): Promise<boolean> {
   const cfg = await getConfig();
   const v = cfg[k];
@@ -182,11 +184,10 @@ function toCaso(r: IncRow, dotByRut: Map<string, DotacionRow>, horaSoloOlvido: b
     completa: false,
     confirmada: !!r.confirmada,
   };
-    c.completa = calcCompleta(
+  c.completa = calcCompleta(
     { tipo: c.tipo, motivo: c.motivo, entradaReal: c.entradaReal, salidaReal: c.salidaReal, obs: c.obs, entro: c.entro, salio: c.salio, respaldos: c.respaldos },
     horaSoloOlvido
   );
-  
   return c;
 }
 
@@ -225,6 +226,16 @@ export async function misCasos(session: Session, opts: { verHuerfanos?: boolean 
     if (!cascada) return false;
     return cadena(jer, key(c.nombre)).indexOf(pk) >= 0;
   });
+}
+
+// Las propias inconsistencias de una jefatura (ella también marca en el
+// reloj control, y también tiene su propia jefatura arriba) — separado de
+// `misCasos` porque ese devuelve el equipo a cargo, no los casos propios.
+// Es de solo lectura en la app: quien la regulariza es su propia jefatura,
+// igual que para cualquier funcionario.
+export async function casosPropios(session: Session): Promise<Caso[]> {
+  const todos = await allCasos();
+  return todos.filter((c) => c.rut === session.rut);
 }
 
 export async function getCasoById(id: string): Promise<IncRow | undefined> {
@@ -421,6 +432,7 @@ export async function regularizarMasivoPorFecha(
   }
   return { afectados };
 }
+
 export type ResultadoRegularizacionMasivaJefatura = { afectados: string[] };
 
 // Igual que regularizarMasivoPorFecha, pero acotado al equipo de una
@@ -451,6 +463,7 @@ export async function regularizarMasivoParaJefatura(
   }
   return { afectados };
 }
+
 export type ResultadoCorreccionIngreso = { eliminados: number; regularizados: number };
 
 // Para cuando a alguien le quedan inconsistencias de antes de su fecha real
