@@ -244,6 +244,78 @@ function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
   );
 }
 
+function RegularizacionExitosa({ onRegularizado }: { onRegularizado: () => void }) {
+  const [rut, setRut] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [horaEntrada, setHoraEntrada] = useState('');
+  const [horaSalida, setHoraSalida] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [procesando, setProcesando] = useState(false);
+
+  async function regularizar() {
+    if (!rut.trim() || !fecha || (!horaEntrada && !horaSalida)) {
+      setMensaje('Complete el RUT, la fecha y al menos una hora.');
+      return;
+    }
+    const ok = window.confirm(
+      'Esto va a regularizar el ' +
+        fecha +
+        ' de ' +
+        rut +
+        ' como marcaje realizado con éxito' +
+        (horaEntrada ? ', entrada ' + horaEntrada : '') +
+        (horaSalida ? ', salida ' + horaSalida : '') +
+        ', sin pedir ningún antecedente. Es solo para cuando el marcaje sí existe en GeoVictoria pero no cruzó bien con el reloj de control. ¿Confirma?'
+    );
+    if (!ok) return;
+    setProcesando(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ afectados: number }>('/api/admin/regularizar-exitoso', { rut, fecha, horaEntrada, horaSalida });
+      setMensaje(r.afectados + ' caso(s) del ' + fecha + ' quedaron regularizados como marcaje exitoso.');
+      onRegularizado();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo regularizar.');
+    } finally {
+      setProcesando(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Regularización de marcajes realizados con éxito</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
+        Para cuando el cruce entre el reloj de control y GeoVictoria falla y deja una inconsistencia falsa: la persona
+        sí marcó con éxito, solo que el dato no cruzó bien. Regulariza directo con las horas que indique, sin pedir
+        ningún antecedente ni motivo — esta opción es exclusiva de administración.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 12.5 }}>
+          RUT de la persona
+          <input type="text" placeholder="12.345.678-9" value={rut} onChange={(e) => setRut(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Fecha
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Hora entrada
+          <input type="time" value={horaEntrada} onChange={(e) => setHoraEntrada(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Hora salida
+          <input type="time" value={horaSalida} onChange={(e) => setHoraSalida(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <button type="button" className="btn btn-secondary" onClick={regularizar} disabled={procesando}>
+          {procesando ? 'Regularizando…' : 'Regularizar como exitoso'}
+        </button>
+      </div>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 function RestablecerClave() {
   const [correo, setCorreo] = useState('');
   const [mensaje, setMensaje] = useState('');
@@ -386,6 +458,7 @@ export function CargaBase({
       <CorreccionAtraso onCorregido={onCargada} />
       <RegularizacionMasiva onRegularizado={onCargada} />
       <CorreccionIngreso onCorregido={onCargada} />
+      <RegularizacionExitosa onRegularizado={onCargada} />
       <RestablecerClave />
     </main>
   );
