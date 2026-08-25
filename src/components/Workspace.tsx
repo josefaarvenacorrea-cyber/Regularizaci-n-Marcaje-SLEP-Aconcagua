@@ -17,6 +17,7 @@ import { HistorialDrawer } from './HistorialDrawer';
 import { RespaldosAdmin } from './RespaldosAdmin';
 import { VistaFuncionario } from './VistaFuncionario';
 import { RegularizacionMasivaJefatura } from './RegularizacionMasivaJefatura';
+import { MisPropiasInconsistencias } from './MisPropiasInconsistencias';
 
 type Resumen = {
   jefaturas: JefaturaResumen[];
@@ -127,7 +128,7 @@ export function Workspace() {
     fetchSession();
   }, [fetchSession]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (!session || session.debeCambiarClave) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCasos(session.rol === 'admin' && verHuerfanos);
@@ -137,7 +138,7 @@ export function Workspace() {
     }
   }, [session, verHuerfanos, fetchCasos, fetchResumen, fetchRegistro]);
 
-    async function entrar(correo: string, clave: string): Promise<string | null> {
+  async function entrar(correo: string, clave: string): Promise<string | null> {
     try {
       const r = await api.post<{ session: Session }>('/api/auth/login', { correo, clave });
       setSession(r.session);
@@ -173,9 +174,12 @@ export function Workspace() {
     async (id: string, patch: Record<string, unknown>) => {
       setCasos((prev) => prev.map((c) => (c.id === id ? { ...c, ...mapPatchOptimista(patch) } : c)));
       try {
-        const r = await api.patch<{ caso: Caso }>(`/api/casos/${encodeURIComponent(id)}`, patch);
+        const r = await api.patch<{ caso: Caso; avisoNotificacion?: string }>(`/api/casos/${encodeURIComponent(id)}`, patch);
         setCasos((prev) => prev.map((c) => (c.id === id ? r.caso : c)));
         if (esAdmin) fetchResumen().catch(() => {});
+        if (r.avisoNotificacion) {
+          setAvisoGlobal('El caso quedó regularizado, pero el aviso por correo no salió: ' + r.avisoNotificacion);
+        }
       } catch {
         setAvisoGlobal('No se pudo guardar el cambio. Reintente.');
         fetchCasos(esAdmin && verHuerfanos).catch(() => {});
@@ -272,6 +276,7 @@ export function Workspace() {
       { key: 'bandeja', label: 'Mis casos', badge: total ? String(total) : '' },
       { key: 'rapida', label: 'Revisión rápida', badge: pendientes ? String(pendientes) : '' },
       { key: 'envio', label: 'Cierre y Excel' },
+      { key: 'propias', label: 'Mis inconsistencias', badge: '' },
     ];
     if (puedeMasivo) base.push({ key: 'masivo', label: 'Regularización grupal', badge: '' });
     return base;
@@ -281,7 +286,7 @@ export function Workspace() {
     return <div style={{ padding: 60, textAlign: 'center' }} className="text-muted">Cargando…</div>;
   }
 
-    if (!session) {
+  if (!session) {
     return <LoginScreen onEntrar={entrar} />;
   }
 
@@ -388,6 +393,8 @@ export function Workspace() {
       {!esAdmin && puedeMasivo && vista === 'masivo' && (
         <RegularizacionMasivaJefatura onRegularizado={() => { fetchCasos(false); }} />
       )}
+
+      {!esAdmin && vista === 'propias' && <MisPropiasInconsistencias />}
 
       {vista === 'envio' && (
         <CierreEnvio
