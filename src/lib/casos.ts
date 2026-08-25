@@ -499,6 +499,33 @@ export async function corregirIngresoFuncionario(rut: string, fechaIngreso: stri
   return { eliminados, regularizados };
 }
 
+export type ResultadoRegularizacionExitosa = { afectados: number };
+
+// Para cuando el cruce entre el reloj de control y GeoVictoria falla y deja
+// una inconsistencia falsa: la persona sí marcó con éxito, solo que el dato
+// no cruzó bien entre ambos sistemas. Regulariza directo con las horas que
+// indique el administrador, sin exigir motivo del catálogo, observación ni
+// respaldo — no es una inconsistencia real que necesite justificación.
+export async function regularizarMarcajeExitoso(
+  rut: string,
+  fecha: string,
+  horaEntrada: string,
+  horaSalida: string
+): Promise<ResultadoRegularizacionExitosa> {
+  const rows = await query<IncRow>('SELECT * FROM inconsistencias WHERE rut = $1 AND fecha = $2 AND confirmada = false', [rut, fecha]);
+  const now = new Date().toISOString();
+  const motivo = 'Marcaje registrado con éxito (no cruzó con el reloj de control)';
+  let afectados = 0;
+  for (const r of rows) {
+    await execute(
+      `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
+      [motivo, horaEntrada, horaSalida, now, r.id]
+    );
+    afectados++;
+  }
+  return { afectados };
+}
+
 export type JefaturaResumen = {
   nombre: string;
   correo: string;
