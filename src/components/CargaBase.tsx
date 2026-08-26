@@ -271,8 +271,14 @@ function RegularizacionExitosa({ onRegularizado }: { onRegularizado: () => void 
     setProcesando(true);
     setMensaje('');
     try {
-      const r = await api.post<{ afectados: number }>('/api/admin/regularizar-exitoso', { rut, fecha, horaEntrada, horaSalida });
-      setMensaje(r.afectados + ' caso(s) del ' + fecha + ' quedaron regularizados como marcaje exitoso.');
+      const r = await api.post<{ afectados: number; atrasosOmitidos: number }>('/api/admin/regularizar-exitoso', { rut, fecha, horaEntrada, horaSalida });
+      setMensaje(
+        r.afectados +
+          ' caso(s) del ' +
+          fecha +
+          ' quedaron regularizados como marcaje exitoso.' +
+          (r.atrasosOmitidos ? ' ' + r.atrasosOmitidos + ' caso(s) de Atraso no se tocaron (necesitan su propio motivo).' : '')
+      );
       onRegularizado();
     } catch (e) {
       setMensaje(e instanceof Error ? e.message : 'No se pudo regularizar.');
@@ -338,14 +344,18 @@ function AsistenciaPersona() {
     form.append('archivo', file);
     form.append('rut', rut);
     try {
-      const r = await api.postForm<{ regularizados: number; parciales: number; sinCoincidencia: number }>('/api/admin/asistencia-persona', form);
+      const r = await api.postForm<{ regularizados: number; parciales: number; sinCoincidencia: number; atrasosOmitidos: number }>(
+        '/api/admin/asistencia-persona',
+        form
+      );
       setMensaje(
         r.regularizados +
           ' caso(s) quedaron regularizados como marcaje exitoso, ' +
           r.parciales +
           ' quedaron con la hora que sí llegó guardada pero pendientes (falta la otra hora), y ' +
           r.sinCoincidencia +
-          ' fecha(s) del archivo no tenían ninguna inconsistencia pendiente sin motivo para esta persona.'
+          ' fecha(s) del archivo no tenían ninguna inconsistencia pendiente sin motivo para esta persona.' +
+          (r.atrasosOmitidos ? ' ' + r.atrasosOmitidos + ' caso(s) de Atraso no se tocaron (necesitan su propio motivo).' : '')
       );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo procesar el archivo.');
