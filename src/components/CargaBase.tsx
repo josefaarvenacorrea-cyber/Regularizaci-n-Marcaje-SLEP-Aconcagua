@@ -244,74 +244,65 @@ function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
   );
 }
 
-function RegularizacionExitosa({ onRegularizado }: { onRegularizado: () => void }) {
+function AsistenciaPersona() {
   const [rut, setRut] = useState('');
-  const [fecha, setFecha] = useState('');
-  const [horaEntrada, setHoraEntrada] = useState('');
-  const [horaSalida, setHoraSalida] = useState('');
   const [mensaje, setMensaje] = useState('');
-  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState('');
+  const [subiendo, setSubiendo] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  async function regularizar() {
-    if (!rut.trim() || !fecha || (!horaEntrada && !horaSalida)) {
-      setMensaje('Complete el RUT, la fecha y al menos una hora.');
+  async function onArchivo(file: File | undefined) {
+    if (!file) return;
+    if (!rut.trim()) {
+      setError('Ingrese primero el RUT de la persona.');
       return;
     }
-    const ok = window.confirm(
-      'Esto va a regularizar el ' +
-        fecha +
-        ' de ' +
-        rut +
-        ' como marcaje realizado con éxito' +
-        (horaEntrada ? ', entrada ' + horaEntrada : '') +
-        (horaSalida ? ', salida ' + horaSalida : '') +
-        ', sin pedir ningún antecedente. Es solo para cuando el marcaje sí existe en GeoVictoria pero no cruzó bien con el reloj de control. ¿Confirma?'
-    );
-    if (!ok) return;
-    setProcesando(true);
+    setSubiendo(true);
+    setError('');
     setMensaje('');
+    const form = new FormData();
+    form.append('archivo', file);
+    form.append('rut', rut);
     try {
-      const r = await api.post<{ afectados: number }>('/api/admin/regularizar-exitoso', { rut, fecha, horaEntrada, horaSalida });
-      setMensaje(r.afectados + ' caso(s) del ' + fecha + ' quedaron regularizados como marcaje exitoso.');
-      onRegularizado();
+      const r = await api.postForm<{ regularizados: number; parciales: number; sinCoincidencia: number }>('/api/admin/asistencia-persona', form);
+      setMensaje(
+        r.regularizados +
+          ' caso(s) quedaron regularizados como marcaje exitoso, ' +
+          r.parciales +
+          ' quedaron con la hora que sí llegó guardada pero pendientes (falta la otra hora), y ' +
+          r.sinCoincidencia +
+          ' fecha(s) del archivo no tenían ninguna inconsistencia pendiente sin motivo para esta persona.'
+      );
     } catch (e) {
-      setMensaje(e instanceof Error ? e.message : 'No se pudo regularizar.');
+      setError(e instanceof Error ? e.message : 'No se pudo procesar el archivo.');
     } finally {
-      setProcesando(false);
+      setSubiendo(false);
+      if (inputRef.current) inputRef.current.value = '';
     }
   }
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
       <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
-      <h6 style={{ margin: '0 0 6px' }}>Regularización de marcajes realizados con éxito</h6>
+      <h6 style={{ margin: '0 0 6px' }}>Subsanar con la asistencia real de una persona</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
-        Para cuando el cruce entre el reloj de control y GeoVictoria falla y deja una inconsistencia falsa: la persona
-        sí marcó con éxito, solo que el dato no cruzó bien. Regulariza directo con las horas que indique, sin pedir
-        ningún antecedente ni motivo — esta opción es exclusiva de administración.
+        Para cuando el cruce con GeoVictoria falla para una persona en particular: suba un archivo con las columnas{' '}
+        <em>Fecha, Entrada, Salida</em> con lo que sí marcó. Los días donde llega la hora que pedía el caso quedan
+        regularizados solos, sin pedir antecedente ni respaldo. Si solo llega una de las dos horas, esa hora se
+        guarda igual pero el caso sigue pendiente hasta que llegue la que falta. No toca casos que ya tengan un
+        motivo asignado (para no pisar lo que la jefatura ya esté trabajando).
       </p>
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <label style={{ fontSize: 12.5 }}>
           RUT de la persona
           <input type="text" placeholder="12.345.678-9" value={rut} onChange={(e) => setRut(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
         </label>
-        <label style={{ fontSize: 12.5 }}>
-          Fecha
-          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        <label className="btn btn-secondary" style={{ cursor: subiendo ? 'wait' : 'pointer' }}>
+          <input ref={inputRef} type="file" accept=".xlsx,.csv" disabled={subiendo} onChange={(e) => onArchivo(e.target.files?.[0])} style={{ display: 'none' }} />
+          {subiendo ? 'Procesando…' : 'Subir archivo de asistencia'}
         </label>
-        <label style={{ fontSize: 12.5 }}>
-          Hora entrada
-          <input type="time" value={horaEntrada} onChange={(e) => setHoraEntrada(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
-        </label>
-        <label style={{ fontSize: 12.5 }}>
-          Hora salida
-          <input type="time" value={horaSalida} onChange={(e) => setHoraSalida(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
-        </label>
-        <button type="button" className="btn btn-secondary" onClick={regularizar} disabled={procesando}>
-          {procesando ? 'Regularizando…' : 'Regularizar como exitoso'}
-        </button>
       </div>
-      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{mensaje}</div>}
+      {(error || mensaje) && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 10 }}>{error || mensaje}</div>}
     </div>
   );
 }
@@ -458,7 +449,7 @@ export function CargaBase({
       <CorreccionAtraso onCorregido={onCargada} />
       <RegularizacionMasiva onRegularizado={onCargada} />
       <CorreccionIngreso onCorregido={onCargada} />
-      <RegularizacionExitosa onRegularizado={onCargada} />
+      <AsistenciaPersona />
       <RestablecerClave />
     </main>
   );
