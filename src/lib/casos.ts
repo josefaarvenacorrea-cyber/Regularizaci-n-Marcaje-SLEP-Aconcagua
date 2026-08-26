@@ -499,31 +499,46 @@ export async function corregirIngresoFuncionario(rut: string, fechaIngreso: stri
   return { eliminados, regularizados };
 }
 
-export type ResultadoRegularizacionExitosa = { afectados: number };
+export type FilaAsistencia = { fecha: string; entrada: string; salida: string };
+export type ResultadoAsistenciaPersona = { regularizados: number; parciales: number; sinCoincidencia: number };
 
-// Para cuando el cruce entre el reloj de control y GeoVictoria falla y deja
-// una inconsistencia falsa: la persona sí marcó con éxito, solo que el dato
-// no cruzó bien entre ambos sistemas. Regulariza directo con las horas que
-// indique el administrador, sin exigir motivo del catálogo, observación ni
-// respaldo — no es una inconsistencia real que necesite justificación.
-export async function regularizarMarcajeExitoso(
-  rut: string,
-  fecha: string,
-  horaEntrada: string,
-  horaSalida: string
-): Promise<ResultadoRegularizacionExitosa> {
-  const rows = await query<IncRow>('SELECT * FROM inconsistencias WHERE rut = $1 AND fecha = $2 AND confirmada = false', [rut, fecha]);
-  const now = new Date().toISOString();
+// Para cuando el cruce con GeoVictoria falla para una persona puntual: el
+// administrador sube la asistencia real (fecha, entrada, salida) que sí
+// marcó, y esto la cruza contra las inconsistencias pendientes y SIN motivo
+// asignado todavía de esa persona (para no pisar nada en lo que una jefatura
+// ya esté trabajando). Si llega la hora que ese caso pedía, queda
+// regularizado solo, con el motivo "Marcaje registrado con éxito"; si solo
+// llega una de las dos horas necesarias, se guarda esa hora pero el caso
+// sigue pendiente — la inconsistencia real (la hora que sigue faltando) no
+// se pierde ni se disimula.
+export async function regularizarAsistenciaPersona(rut: string, filas: FilaAsistencia[]): Promise<ResultadoAsistenciaPersona> {
   const motivo = 'Marcaje registrado con éxito (no cruzó con el reloj de control)';
-  let afectados = 0;
-  for (const r of rows) {
-    await execute(
-      `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
-      [motivo, horaEntrada, horaSalida, now, r.id]
+  const now = new Date().toISOString();
+  let regularizados = 0;
+  let parciales = 0;
+  let sinCoincidencia = 0;
+  for (const f of filas) {
+    if (!f.entrada && !f.salida) continue;
+    const rows = await query<IncRow>(
+      `SELECT * FROM inconsistencias WHERE rut = $1 AND fecha = $2 AND confirmada = false AND motivo = ''`,
+      [rut, f.fecha]
     );
-    afectados++;
+    if (!rows.length) {
+      sinCoincidencia++;
+      continue;
+    }
+    for (const r of rows) {
+      const p = pide(r.tipo);
+      const completaAhora = (!p.e || !!f.entrada) && (!p.s || !!f.salida);
+      await execute(
+        `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=$4, updated_at=$5 WHERE id=$6`,
+        [motivo, f.entrada, f.salida, completaAhora, now, r.id]
+      );
+      if (completaAhora) regularizados++;
+      else parciales++;
+    }
   }
-  return { afectados };
+  return { regularizados, parciales, sinCoincidencia };
 }
 
 export type JefaturaResumen = {
