@@ -41,10 +41,28 @@ function indexar<K extends string>(headerCells: Celda[], matcher: (h: string) =>
   return idx;
 }
 
+// Excel convierte automáticamente un correo escrito en una celda en un link
+// (mailto:), y ExcelJS entrega esas celdas como { text, hyperlink } en vez de
+// un string plano — igual que un texto con formato enriquecido llega como
+// { richText: [...] }. Sin desenvolver esto, cualquier columna de texto con
+// un correo "clickeable" se leería como "[object Object]".
+function desenvolver(v: unknown): unknown {
+  if (v && typeof v === 'object') {
+    if ('text' in v && typeof (v as { text: unknown }).text === 'string') return (v as { text: string }).text;
+    if ('richText' in v && Array.isArray((v as { richText: unknown }).richText)) {
+      return (v as { richText: { text?: string }[] }).richText.map((r) => r.text || '').join('');
+    }
+    // Celda con fórmula: usamos el valor ya calculado que trae guardado el
+    // archivo (igual que ve la persona que lo abrió en Excel/Sheets).
+    if ('formula' in v && 'result' in v) return desenvolver((v as { result: unknown }).result);
+  }
+  return v;
+}
+
 function celda(fila: Celda[], idx: Partial<Record<string, number>>, campo: string): unknown {
   const c = idx[campo];
   if (c === undefined) return undefined;
-  return fila.find((f) => f.col === c)?.value;
+  return desenvolver(fila.find((f) => f.col === c)?.value);
 }
 
 // ── Inconsistencias (reloj control) ─────────────────────────────────────
@@ -135,6 +153,42 @@ export async function parseXlsx(buffer: ArrayBuffer): Promise<RegistroCarga[]> {
 
 export function parseCsv(text: string): RegistroCarga[] {
   return registrosIncDesdeGrid(gridFromCsv(text));
+}
+
+// ── Asistencia real de una persona (subsanar cruce con GeoVictoria) ────────
+
+export type RegistroAsistencia = { fecha: string; entrada: string; salida: string };
+
+type CampoAsist = 'fe' | 'en' | 'sa';
+
+function matchHeaderAsist(h: string): CampoAsist | null {
+  if (/fecha/.test(h)) return 'fe';
+  if (/entr/.test(h)) return 'en';
+  if (/sali/.test(h)) return 'sa';
+  return null;
+}
+
+function registrosAsistDesdeGrid({ headerCells, filas }: Grid): RegistroAsistencia[] {
+  const idx = indexar(headerCells, matchHeaderAsist);
+  const registros: RegistroAsistencia[] = [];
+  filas.forEach((fila) => {
+    const fecha = fechaDeCelda(celda(fila, idx, 'fe'));
+    if (!fecha) return;
+    registros.push({
+      fecha,
+      entrada: horaDeCelda(celda(fila, idx, 'en')) || '',
+      salida: horaDeCelda(celda(fila, idx, 'sa')) || '',
+    });
+  });
+  return registros;
+}
+
+export async function parseXlsxAsistencia(buffer: ArrayBuffer): Promise<RegistroAsistencia[]> {
+  return registrosAsistDesdeGrid(await gridFromXlsx(buffer));
+}
+
+export function parseCsvAsistencia(text: string): RegistroAsistencia[] {
+  return registrosAsistDesdeGrid(gridFromCsv(text));
 }
 
 // ── Dotación efectiva ────────────────────────────────────────────────────
