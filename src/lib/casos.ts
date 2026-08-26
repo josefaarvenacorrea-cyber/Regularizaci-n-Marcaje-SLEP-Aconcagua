@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta, corregirTipoAtraso, pide } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso, grupo, pide } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
@@ -499,13 +499,17 @@ export async function corregirIngresoFuncionario(rut: string, fechaIngreso: stri
   return { eliminados, regularizados };
 }
 
-export type ResultadoRegularizacionExitosa = { afectados: number };
+export type ResultadoRegularizacionExitosa = { afectados: number; atrasosOmitidos: number };
 
 // Para cuando el cruce entre el reloj de control y GeoVictoria falla y deja
 // una inconsistencia falsa: la persona sí marcó con éxito, solo que el dato
 // no cruzó bien entre ambos sistemas. Regulariza directo con las horas que
 // indique el administrador, sin exigir motivo del catálogo, observación ni
 // respaldo — no es una inconsistencia real que necesite justificación.
+// Nunca toca casos "Atraso": ahí la entrada sí está marcada en el reloj
+// control (solo que tarde), así que no es un problema de cruce de datos —
+// es una tardanza real que necesita su propio motivo, no un descarte
+// automático como "marcaje exitoso".
 export async function regularizarMarcajeExitoso(
   rut: string,
   fecha: string,
@@ -516,18 +520,23 @@ export async function regularizarMarcajeExitoso(
   const now = new Date().toISOString();
   const motivo = 'Marcaje registrado con éxito (no cruzó con el reloj de control)';
   let afectados = 0;
+  let atrasosOmitidos = 0;
   for (const r of rows) {
+    if (grupo(r.tipo) === 'atraso') {
+      atrasosOmitidos++;
+      continue;
+    }
     await execute(
       `UPDATE inconsistencias SET motivo=$1, entrada_real=$2, salida_real=$3, confirmada=true, updated_at=$4 WHERE id=$5`,
       [motivo, horaEntrada, horaSalida, now, r.id]
     );
     afectados++;
   }
-  return { afectados };
+  return { afectados, atrasosOmitidos };
 }
 
 export type FilaAsistencia = { fecha: string; entrada: string; salida: string };
-export type ResultadoAsistenciaPersona = { regularizados: number; parciales: number; sinCoincidencia: number };
+export type ResultadoAsistenciaPersona = { regularizados: number; parciales: number; sinCoincidencia: number; atrasosOmitidos: number };
 
 // Para cuando el cruce con GeoVictoria falla para una persona puntual: el
 // administrador sube la asistencia real (fecha, entrada, salida) que sí
@@ -537,13 +546,17 @@ export type ResultadoAsistenciaPersona = { regularizados: number; parciales: num
 // regularizado solo, con el motivo "Marcaje registrado con éxito"; si solo
 // llega una de las dos horas necesarias, se guarda esa hora pero el caso
 // sigue pendiente — la inconsistencia real (la hora que sigue faltando) no
-// se pierde ni se disimula.
+// se pierde ni se disimula. Nunca toca casos "Atraso": ahí la entrada ya
+// está marcada en el reloj control (solo que tarde), así que no es un
+// problema de cruce de datos — necesita su propio motivo, no un descarte
+// automático.
 export async function regularizarAsistenciaPersona(rut: string, filas: FilaAsistencia[]): Promise<ResultadoAsistenciaPersona> {
   const motivo = 'Marcaje registrado con éxito (no cruzó con el reloj de control)';
   const now = new Date().toISOString();
   let regularizados = 0;
   let parciales = 0;
   let sinCoincidencia = 0;
+  let atrasosOmitidos = 0;
   for (const f of filas) {
     if (!f.entrada && !f.salida) continue;
     const rows = await query<IncRow>(
@@ -555,6 +568,10 @@ export async function regularizarAsistenciaPersona(rut: string, filas: FilaAsist
       continue;
     }
     for (const r of rows) {
+      if (grupo(r.tipo) === 'atraso') {
+        atrasosOmitidos++;
+        continue;
+      }
       const p = pide(r.tipo);
       const completaAhora = (!p.e || !!f.entrada) && (!p.s || !!f.salida);
       await execute(
@@ -565,7 +582,7 @@ export async function regularizarAsistenciaPersona(rut: string, filas: FilaAsist
       else parciales++;
     }
   }
-  return { regularizados, parciales, sinCoincidencia };
+  return { regularizados, parciales, sinCoincidencia, atrasosOmitidos };
 }
 
 export type JefaturaResumen = {
