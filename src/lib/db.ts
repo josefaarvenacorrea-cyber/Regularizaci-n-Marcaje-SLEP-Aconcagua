@@ -130,9 +130,20 @@ async function ensureSchema(pool: Pool) {
 
 // Garantiza que el esquema exista antes de la primera consulta de este
 // proceso; las siguientes llamadas reutilizan la misma promesa ya resuelta.
+// Si ensureSchema falla (p. ej. un problema pasajero de conexión justo al
+// arrancar), no hay que dejar esa promesa rechazada guardada para siempre:
+// en Vercel una misma instancia serverless puede quedar "viva" y atendiendo
+// pedidos por un buen rato, así que sin este reintento, un solo fallo inicial
+// tumbaría cada pedido siguiente que caiga en esa instancia hasta que se
+// recicle sola.
 async function ready(): Promise<Pool> {
   const pool = getPool();
-  if (!global.__schemaReady) global.__schemaReady = ensureSchema(pool);
+  if (!global.__schemaReady) {
+    global.__schemaReady = ensureSchema(pool).catch((e) => {
+      global.__schemaReady = undefined;
+      throw e;
+    });
+  }
   await global.__schemaReady;
   return pool;
 }
