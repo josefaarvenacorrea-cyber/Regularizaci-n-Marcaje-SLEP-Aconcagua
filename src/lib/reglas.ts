@@ -34,6 +34,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
+    { v: 'Marcaje registrado con éxito (no cruzó con el reloj de control)', hora: true, soloAdmin: true },
+    { v: 'Licencia médica', requiereRespaldo: true, soloAdmin: true },
     // Usado solo por la regularización masiva de la puesta en marcha del
     // reloj control (un hecho único, no algo que vuelva a pasar): no se
     // ofrece en el menú de motivos, pero sigue siendo un motivo válido para
@@ -54,6 +56,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
+    { v: 'Marcaje registrado con éxito (no cruzó con el reloj de control)', hora: true, soloAdmin: true },
+    { v: 'Licencia médica', requiereRespaldo: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
@@ -68,6 +72,8 @@ export const CATALOGO: Record<'falta' | 'atraso' | 'inasistencia', Motivo[]> = {
     { v: 'Trabajo remoto', hora: true, ambasHoras: true },
     { v: 'Primer día de trabajo (aún no enrolado en el reloj de marcación)', hora: true },
     { v: 'Trabajó en feriado por emergencia', hora: true, soloAdmin: true },
+    { v: 'Marcaje registrado con éxito (no cruzó con el reloj de control)', hora: true, soloAdmin: true },
+    { v: 'Licencia médica', requiereRespaldo: true, soloAdmin: true },
     { v: 'Pruebas por instalación de reloj de marcación', hora: true, oculto: true },
     { v: 'Autorizar el descuento' },
   ],
@@ -172,6 +178,18 @@ function aMinutos(hora: string | null | undefined): number | null {
   const m = String(hora || '').match(/^(\d{1,2}):(\d{2})$/);
   if (!m) return null;
   return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+
+// El "Observado" del reloj control a veces marca solo "Falta Entrada" o
+// "Falta Salida" en un día donde en realidad NINGUNA de las dos marcas
+// existe — es una ausencia del día completo, no una falta a medias. Se
+// corrige a "Inasistencia Injustificada" para que el caso pida justificar
+// la jornada completa (ambas horas), no solo la mitad que el reloj control
+// alcanzó a detectar.
+export function corregirTipoFalta(tipo: string, entro: string | null, salio: string | null): string | undefined {
+  if (grupo(tipo) !== 'falta') return undefined;
+  if (entro || salio) return undefined;
+  return 'Inasistencia Injustificada';
 }
 
 // Reclasifica un caso "Atraso" cuya entrada en realidad cae dentro del
