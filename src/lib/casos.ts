@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta, corregirTipoAtraso, grupo, pide } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso, corregirTipoFalta, grupo, pide } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
@@ -348,7 +348,11 @@ export async function actualizarBase(
       // clave de negocio, para que quede bien clasificado desde la carga.
       const tipoCorregido = corregirTipoAtraso(r.tipo, r.turno, r.entro, r.salio);
       if (tipoCorregido === null) continue; // no es una inconsistencia real
-      const tipo = tipoCorregido ?? r.tipo;
+      let tipo = tipoCorregido ?? r.tipo;
+      // Igual que la corrección de Atraso de arriba, pero para el caso
+      // inverso: un día sin ninguna marca que el reloj control etiquetó como
+      // "Falta Entrada" o "Falta Salida" en vez de ausencia completa.
+      tipo = corregirTipoFalta(tipo, r.entro, r.salio) ?? tipo;
 
       const clave = claveCaso(r.rut, r.fecha, tipo);
       const d = dotByRut.get(r.rut);
@@ -429,6 +433,27 @@ export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoC
     }
   }
   return { reclasificados, eliminados };
+}
+
+export type ResultadoCorreccionFalta = { reclasificados: number };
+
+// Corrección de una vez para los casos "Falta Entrada"/"Falta Salida" ya
+// cargados desde antes de que `actualizarBase` aplicara `corregirTipoFalta`
+// en la carga misma (ver ahí el porqué) — días sin ninguna marca que
+// deberían ser "Inasistencia Injustificada". Solo toca casos pendientes: uno
+// ya enviado se deja tal cual, para no invalidar de golpe algo que la
+// jefatura ya regularizó y notificó.
+export async function corregirClasificacionFaltaExistente(): Promise<ResultadoCorreccionFalta> {
+  const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE confirmada = false AND tipo ILIKE 'falta%'`);
+  const now = new Date().toISOString();
+  let reclasificados = 0;
+  for (const r of rows) {
+    const nuevo = corregirTipoFalta(r.tipo, r.entro, r.salio);
+    if (!nuevo) continue;
+    await execute('UPDATE inconsistencias SET tipo = $1, updated_at = $2 WHERE id = $3', [nuevo, now, r.id]);
+    reclasificados++;
+  }
+  return { reclasificados };
 }
 
 export type ResultadoRegularizacionMasiva = { afectados: number };
