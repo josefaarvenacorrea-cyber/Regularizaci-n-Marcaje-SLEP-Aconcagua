@@ -204,9 +204,14 @@ async function respaldoCounts(): Promise<Map<string, number>> {
   return new Map(rows.map((r) => [r.caso_id, parseInt(r.n, 10)]));
 }
 
-export async function allCasos(): Promise<Caso[]> {
+// Trae inconsistencias con un filtro SQL opcional, en vez de siempre traer la
+// tabla completa y filtrar en memoria — importante para no gastar de más la
+// cuota de transferencia de datos de la base: la mayoría de las cargas de
+// pantalla son de una jefatura viendo solo a su propio equipo (unas pocas
+// personas), no todo el servicio.
+async function casosFiltrados(whereSql: string, params: unknown[]): Promise<Caso[]> {
   const [rows, dot, horaSoloOlvido, respCounts] = await Promise.all([
-    query<IncRow>('SELECT * FROM inconsistencias'),
+    query<IncRow>(`SELECT * FROM inconsistencias${whereSql ? ' WHERE ' + whereSql : ''}`, params),
     loadDotacion(),
     getConfigBool('horaSoloOlvido', false),
     respaldoCounts(),
@@ -215,25 +220,38 @@ export async function allCasos(): Promise<Caso[]> {
   return rows.map((r) => toCaso(r, dotByRut, horaSoloOlvido, respCounts.get(r.id) || 0));
 }
 
+export async function allCasos(): Promise<Caso[]> {
+  return casosFiltrados('', []);
+}
+
 // Casos visibles para la sesión actual: equipo de la jefatura (directo, o en
 // cascada si está habilitado), o todo el servicio / huérfanos para admin.
 export async function misCasos(session: Session, opts: { verHuerfanos?: boolean } = {}): Promise<Caso[]> {
-  const todos = await allCasos();
   if (session.rol === 'admin') {
-    return opts.verHuerfanos ? todos.filter((c) => !c.jefatura) : todos;
+    if (opts.verHuerfanos) return casosFiltrados(`(jefatura IS NULL OR jefatura = '')`, []);
+    return allCasos();
   }
   if (session.rol === 'funcionario') {
-    return todos.filter((c) => c.rut === session.rut);
+    return casosFiltrados('rut = $1', [session.rut]);
   }
+  // El equipo a cargo de una jefatura se determina desde la dotación (quién
+  // depende de quién), no desde el texto que quedó guardado en cada caso —
+  // reemplazarDotacion() ya mantiene ambos sincronizados en cada carga de
+  // dotación nueva, así que arrancar desde la dotación (una tabla chica) para
+  // decidir qué RUTs consultar da el mismo resultado que filtrar caso por
+  // caso, pero sin traer la tabla completa de inconsistencias.
   const [dot, cascada] = await Promise.all([loadDotacion(), getConfigBool('cascada', false)]);
   const jer = jerarquiaMap(dot);
   const pk = key(session.nombre);
-  return todos.filter((c) => {
-    if (!c.jefatura) return false;
-    if (key(c.jefatura) === pk) return true;
-    if (!cascada) return false;
-    return cadena(jer, key(c.nombre)).indexOf(pk) >= 0;
-  });
+  const ruts = dot
+    .filter((d) => {
+      if (key(d.jefatura) === pk) return true;
+      if (!cascada) return false;
+      return cadena(jer, key(d.nombre)).indexOf(pk) >= 0;
+    })
+    .map((d) => d.rut);
+  if (!ruts.length) return [];
+  return casosFiltrados('rut = ANY($1)', [ruts]);
 }
 
 // Las propias inconsistencias de una jefatura (ella también marca en el
@@ -242,8 +260,7 @@ export async function misCasos(session: Session, opts: { verHuerfanos?: boolean 
 // Es de solo lectura en la app: quien la regulariza es su propia jefatura,
 // igual que para cualquier funcionario.
 export async function casosPropios(session: Session): Promise<Caso[]> {
-  const todos = await allCasos();
-  return todos.filter((c) => c.rut === session.rut);
+  return casosFiltrados('rut = $1', [session.rut]);
 }
 
 export async function getCasoById(id: string): Promise<IncRow | undefined> {
