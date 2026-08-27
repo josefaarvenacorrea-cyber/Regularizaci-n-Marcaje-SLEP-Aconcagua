@@ -109,6 +109,42 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
   );
 }
 
+function CorreccionFalta({ onCorregido }: { onCorregido: () => void }) {
+  const [mensaje, setMensaje] = useState('');
+  const [corrigiendo, setCorrigiendo] = useState(false);
+
+  async function corregir() {
+    setCorrigiendo(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ reclasificados: number }>('/api/admin/corregir-falta');
+      setMensaje(r.reclasificados + ' casos reclasificados de Falta Entrada/Salida a Inasistencia Injustificada.');
+      onCorregido();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo corregir la clasificación.');
+    } finally {
+      setCorrigiendo(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
+      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
+      <h6 style={{ margin: '0 0 6px' }}>Corrección: Falta mal clasificada como Inasistencia</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
+        Corrige de una vez los casos pendientes &ldquo;Falta Entrada&rdquo; o &ldquo;Falta Salida&rdquo; ya cargados que en realidad no tienen
+        ninguna marca ese día (ni entrada ni salida) — los reclasifica a &ldquo;Inasistencia Injustificada&rdquo; para que pidan
+        justificar la jornada completa, no solo la mitad. No toca casos que la jefatura ya haya enviado. Las cargas nuevas
+        ya se corrigen solas; esto es solo para lo que ya estaba mal cargado antes de ese cambio.
+      </p>
+      <button type="button" className="btn btn-secondary" onClick={corregir} disabled={corrigiendo}>
+        {corrigiendo ? 'Corrigiendo…' : 'Corregir clasificación de Falta'}
+      </button>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 8 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 function RegularizacionMasiva({ onRegularizado }: { onRegularizado: () => void }) {
   const [fecha, setFecha] = useState('2026-01-02');
   const [motivo, setMotivo] = useState('Pruebas por instalación de reloj de marcación');
@@ -531,6 +567,7 @@ export function CargaBase({
       </p>
 
       <CorreccionAtraso onCorregido={onCargada} />
+      <CorreccionFalta onCorregido={onCargada} />
       <RegularizacionMasiva onRegularizado={onCargada} />
       <CorreccionIngreso onCorregido={onCargada} />
       <RegularizacionExitosa onRegularizado={onCargada} />
