@@ -11,12 +11,19 @@ export async function POST(request: NextRequest) {
   const correo = key(typeof body.correo === 'string' ? body.correo : '');
   if (!correo) return NextResponse.json({ error: 'Ingrese el correo de la persona.' }, { status: 400 });
 
-  const dot = await loadDotacion();
-  const ficha = dot.find((d) => key(d.correo) === correo);
-  if (!ficha) return NextResponse.json({ error: 'Ese correo no está en la dotación efectiva vigente.' }, { status: 400 });
+  try {
+    const dot = await loadDotacion();
+    const ficha = dot.find((d) => key(d.correo) === correo);
+    if (!ficha) return NextResponse.json({ error: 'Ese correo no está en la dotación efectiva vigente.' }, { status: 400 });
 
-  await borrarClaveCustom(correo);
-  await limpiarIntentosLogin(correo);
+    await borrarClaveCustom(correo);
+    await limpiarIntentosLogin(correo);
 
-  return NextResponse.json({ ok: true, nombre: ficha.nombre });
+    return NextResponse.json({ ok: true, nombre: ficha.nombre });
+  } catch (e) {
+    return NextResponse.json(
+      { error: 'No se pudo reestablecer la contraseña: ' + (e instanceof Error ? e.message : String(e)) },
+      { status: 500 }
+    );
+  }
 }
