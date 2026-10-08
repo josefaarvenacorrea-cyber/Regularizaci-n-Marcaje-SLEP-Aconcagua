@@ -26,9 +26,12 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--color-divider)' }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: 18 }}>Regularización de Marcajes</div>
-          <div className="text-muted" style={{ fontSize: 12 }}>{session.nombre}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 28, width: 'auto' }} />
+          <div>
+            <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 18 }}>Regularización de Marcajes</div>
+            <div className="text-muted" style={{ fontSize: 12 }}>{session.nombre}</div>
+          </div>
         </div>
         <button type="button" className="btn btn-ghost" onClick={onSalir}>Salir</button>
       </header>

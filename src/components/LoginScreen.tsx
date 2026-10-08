@@ -38,6 +38,7 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: st
       }}
     >
       <div>
+        <img src="/slep-logo.webp" alt="SLEP Aconcagua" style={{ height: 48, width: 'auto', marginBottom: 28 }} />
         <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Regularización de marcajes</h6>
         <h1 style={{ fontSize: 40, margin: '0 0 12px', maxWidth: '22ch' }}>Justifique las inconsistencias de marcaje de su equipo</h1>
         <p className="text-muted" style={{ fontSize: 15, maxWidth: '52ch' }}>

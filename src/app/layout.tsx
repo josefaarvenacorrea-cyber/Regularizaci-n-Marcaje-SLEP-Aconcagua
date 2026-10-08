@@ -1,17 +1,13 @@
 import type { Metadata } from "next";
-import { Barlow, Barlow_Condensed } from "next/font/google";
+import { Roboto } from "next/font/google";
 import "./globals.css";
 
-const barlow = Barlow({
+// Roboto es la fuente oficial del UI Kit del Gobierno Digital de Chile —
+// se usa tanto para títulos como para texto de cuerpo, igual que en el kit.
+const roboto = Roboto({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-});
-
-const barlowCondensed = Barlow_Condensed({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  weight: ["400", "600"],
 });
 
 export const metadata: Metadata = {
@@ -21,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="es" className={`${barlow.variable} ${barlowCondensed.variable}`}>
+    <html lang="es" className={roboto.variable}>
       <body>{children}</body>
     </html>
   );
