@@ -93,7 +93,6 @@ export function CierreEnvio({
       </div>
 
       <div className="blueprint" style={{ background: 'var(--color-bg)', marginBottom: 26 }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <table className="table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead><tr><th style={{ textAlign: 'left', padding: '9px 10px' }}>Motivo</th><th style={{ textAlign: 'left', padding: '9px 10px', width: 110 }}>Casos</th><th style={{ textAlign: 'left', padding: '9px 10px' }}>Funcionarios</th></tr></thead>
           <tbody>
@@ -107,7 +106,6 @@ export function CierreEnvio({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr .9fr', gap: 26, alignItems: 'start' }}>
         <div className="blueprint" style={{ padding: 22, background: 'var(--color-neutral-100)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h4 style={{ margin: '0 0 10px' }}>{esAdmin ? 'Declaración de Gestión de Personas' : 'Declaración de la jefatura'}</h4>
           <p className="text-muted" style={{ fontSize: 13 }}>Declaro que las justificaciones y las horas consignadas corresponden a la asistencia efectiva de cada funcionario, y que los antecedentes de respaldo están en mi poder.</p>
           <label style={{ display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 13, marginTop: 8, cursor: 'pointer' }}>
@@ -131,7 +129,6 @@ export function CierreEnvio({
         </div>
 
         <div className="blueprint" style={{ padding: 22, background: 'var(--color-bg)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h4 style={{ margin: '0 0 4px' }}>Dónde queda el archivo</h4>
           <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px' }}>
             El Excel se descarga en su equipo y además queda alojado en el sistema: Gestión de
@@ -148,7 +145,6 @@ export function CierreEnvio({
 
       {esAdmin && (
         <div className="blueprint" style={{ padding: 22, background: 'var(--color-bg)', marginTop: 26 }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16 }}>
             <div>
               <h4 style={{ margin: '0 0 4px' }}>Registro de archivos generados</h4>

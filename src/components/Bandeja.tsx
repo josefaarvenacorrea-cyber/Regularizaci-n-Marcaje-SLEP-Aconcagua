@@ -90,7 +90,6 @@ export function Bandeja({
       </div>
 
       <div className="blueprint" style={{ background: 'var(--color-bg)', overflowX: 'auto' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <table className="table" style={{ width: '100%', minWidth: 1180, borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
@@ -193,7 +192,6 @@ export function Bandeja({
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 }}>
         <button type="button" className="btn btn-primary blueprint" onClick={irEnvio} style={{ padding: '10px 20px' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           Revisar y exportar
         </button>
         <button type="button" className="btn btn-secondary" onClick={irRapida}>Revisión rápida de pendientes</button>

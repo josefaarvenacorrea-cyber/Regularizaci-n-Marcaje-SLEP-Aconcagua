@@ -59,7 +59,6 @@ export function PanelAvance({
       </p>
 
       <div className="blueprint" style={{ background: 'var(--color-bg)', overflowX: 'auto' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <table className="table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr>
@@ -97,13 +96,11 @@ export function PanelAvance({
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginTop: 26, alignItems: 'start' }}>
         <div className="blueprint" style={{ padding: 20, background: 'var(--color-neutral-100)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h4 style={{ margin: '0 0 6px' }}>Casos sin jefatura responsable</h4>
           <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>{casosSinJefatura} casos de funcionarios cuya columna Jefatura viene vacía y {casosNoIdentificados} de RUT que no figuran en la dotación vigente. Ninguna jefatura los ve.</p>
           <button type="button" className="btn btn-secondary" onClick={onVerHuerfanos}>Revisarlos como Gestión de Personas</button>
         </div>
         <div className="blueprint" style={{ padding: 20, background: 'var(--color-bg)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h4 style={{ margin: '0 0 6px' }}>Recordatorio de plazo</h4>
           <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px' }}>{jefaturasPendientes} jefaturas tienen casos sin justificar al {plazoTexto}.</p>
           <button

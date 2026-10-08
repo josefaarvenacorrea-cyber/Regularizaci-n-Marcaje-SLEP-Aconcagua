@@ -63,7 +63,6 @@ export function RespaldosAdmin() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {visibles.map((p) => (
           <details key={p.rut} className="blueprint" style={{ padding: '12px 16px', background: 'var(--color-bg)' }}>
-            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <summary style={{ cursor: 'pointer', fontFamily: 'var(--font-heading)', fontSize: 16 }}>
               📁 {p.nombre} <span className="text-muted" style={{ fontFamily: 'var(--font-body)', fontSize: 12 }}>({p.rut} · {p.casos.reduce((n, c) => n + c.archivos.length, 0)} archivos)</span>
             </summary>

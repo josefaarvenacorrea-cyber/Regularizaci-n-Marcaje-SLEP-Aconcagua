@@ -71,7 +71,6 @@ export function RegularizacionMasivaJefatura({ onRegularizado }: { onRegularizad
       </p>
 
       <div className="blueprint" style={{ padding: 22, background: 'var(--color-neutral-100)' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
           <label style={{ fontSize: 12.5 }}>
             Desde

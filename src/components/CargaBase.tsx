@@ -47,7 +47,6 @@ function TarjetaCarga({
       <p className="text-muted" style={{ maxWidth: '64ch', fontSize: 14 }}>{descripcion}</p>
       <div style={{ display: 'flex', gap: 16, marginTop: 16, alignItems: 'stretch' }}>
         <label className="blueprint" style={{ flex: 1, display: 'block', padding: '30px 26px', textAlign: 'center', cursor: subiendo ? 'wait' : 'pointer', background: 'var(--color-neutral-100)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <input ref={inputRef} type="file" accept=".xlsx,.csv" disabled={subiendo} onChange={(e) => onArchivo(e.target.files?.[0])} style={{ display: 'none' }} />
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" strokeWidth={1.5} style={{ margin: '0 auto 10px' }}>
             <path d="M12 16V4m0 0L8 8m4-4 4 4" />
@@ -57,7 +56,6 @@ function TarjetaCarga({
           <div className="text-muted" style={{ fontSize: 12, marginTop: 4 }}>.xlsx o .csv · se procesa en el servidor</div>
         </label>
         <div className="blueprint" style={{ width: 290, padding: 18, background: 'var(--color-bg)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h6 style={{ margin: '0 0 8px' }}>{panelTitulo}</h6>
           <div style={{ fontSize: 13, lineHeight: 1.7 }}>
             {panelLineas.map((l) => (
@@ -93,7 +91,6 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Corrección: Atraso mal clasificado</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
         Corrige de una vez los casos &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro del margen de tolerancia del
@@ -129,7 +126,6 @@ function CorreccionFalta({ onCorregido }: { onCorregido: () => void }) {
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Corrección: Falta mal clasificada como Inasistencia</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
         Corrige de una vez los casos pendientes &ldquo;Falta Entrada&rdquo; o &ldquo;Falta Salida&rdquo; ya cargados que en realidad no tienen
@@ -184,7 +180,6 @@ function RegularizacionMasiva({ onRegularizado }: { onRegularizado: () => void }
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Regularización masiva por fecha</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
         Para días excepcionales donde casi todo el personal queda con inconsistencias por la misma razón (p. ej. la puesta
@@ -255,7 +250,6 @@ function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Corrección: inconsistencias de antes del ingreso</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
         Para cuando a alguien le quedan inconsistencias de fechas anteriores a su ingreso real al servicio (datos que no
@@ -325,7 +319,6 @@ function RegularizacionExitosa({ onRegularizado }: { onRegularizado: () => void 
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Regularización masiva de marcaje exitoso (una fecha)</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
         Para cuando ya sabe, de una vez, que TODOS los casos pendientes de una persona en una fecha puntual fueron un
@@ -403,7 +396,6 @@ function AsistenciaPersona() {
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Subsanar con la asistencia real de una persona</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
         Para cuando el cruce con GeoVictoria falla para una persona en particular: suba un archivo con las columnas{' '}
@@ -456,7 +448,6 @@ function RestablecerClave() {
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
-      <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
       <h6 style={{ margin: '0 0 6px' }}>Reestablecer contraseña</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 12px', maxWidth: '70ch' }}>
         Para cuando una jefatura o funcionario olvida su contraseña. Borra la que había elegido y la deja de nuevo con

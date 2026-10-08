@@ -11,13 +11,8 @@ export function HistorialDrawer({ rut, items, onClose }: { rut: string; items: C
   const frecuente = [...tipoConteo.entries()].sort((a, b) => b[1] - a[1])[0];
 
   return (
-    <div
-      className="dialog-backdrop"
-      onClick={onClose}
-      style={{ position: 'fixed', inset: 0, background: 'color-mix(in srgb,#1d1f20 45%,transparent)', display: 'flex', justifyContent: 'flex-end', zIndex: 40 }}
-    >
+    <div className="dialog-backdrop" onClick={onClose}>
       <div className="dialog blueprint" onClick={(e) => e.stopPropagation()} style={{ width: 560, maxWidth: '94vw', height: '100%', background: 'var(--color-bg)', padding: 26, overflow: 'auto' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <h6 className="text-muted" style={{ margin: '0 0 4px' }}>Historial del período</h6>

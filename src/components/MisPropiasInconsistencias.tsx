@@ -46,7 +46,6 @@ export function MisPropiasInconsistencias() {
             {pendientes ? pendientes + (pendientes === 1 ? ' inconsistencia pendiente.' : ' inconsistencias pendientes.') : 'Todas están regularizadas.'}
           </p>
           <div className="blueprint" style={{ background: 'var(--color-bg)', overflowX: 'auto' }}>
-            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             <table className="table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr>

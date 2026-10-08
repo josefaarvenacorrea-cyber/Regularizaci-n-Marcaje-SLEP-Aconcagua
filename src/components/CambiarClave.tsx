@@ -65,7 +65,6 @@ export function CambiarClave({ onCambiada, onSalir }: { onCambiada: (session: Se
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 }}>
         <button type="button" className="btn btn-primary blueprint" onClick={guardar} disabled={enviando} style={{ padding: '10px 22px' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           Guardar y continuar
         </button>
         <button type="button" className="btn btn-ghost" onClick={onSalir}>Cerrar sesión</button>

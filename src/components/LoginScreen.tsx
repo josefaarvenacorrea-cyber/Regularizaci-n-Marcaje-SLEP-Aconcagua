@@ -69,7 +69,6 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: st
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
           <button type="button" className="btn btn-primary blueprint" onClick={() => entrar(correo, clave)} disabled={enviando} style={{ padding: '10px 22px' }}>
-            <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
             Entrar
           </button>
           <span style={{ fontSize: 12, color: 'var(--color-accent-700)' }}>{error}</span>
@@ -78,7 +77,6 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: st
 
       {hayDemo && (
         <div className="blueprint" style={{ padding: 20, background: 'var(--color-neutral-100)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h6 style={{ margin: '0 0 3px' }}>Accesos de prueba</h6>
           <p className="text-muted" style={{ fontSize: 11.5, margin: '0 0 12px' }}>Toque un correo para entrar con ese perfil.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--color-divider)' }}>

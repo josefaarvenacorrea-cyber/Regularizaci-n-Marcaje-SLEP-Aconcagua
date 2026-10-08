@@ -51,7 +51,6 @@ export function RevisionRapida({
     return (
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '32px 32px 90px' }}>
         <div className="blueprint" style={{ padding: '56px 28px', textAlign: 'center', background: 'var(--color-neutral-100)' }}>
-          <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
           <h2 style={{ margin: '0 0 6px' }}>No quedan pendientes</h2>
           <p className="text-muted" style={{ fontSize: 14, margin: '0 0 18px' }}>Todas las inconsistencias de su equipo fueron enviadas.</p>
           <button type="button" className="btn btn-primary" onClick={irEnvio}>Revisar y exportar</button>
@@ -71,7 +70,6 @@ export function RevisionRapida({
       </div>
 
       <div className="blueprint" style={{ padding: '26px 28px', background: 'var(--color-neutral-100)', animation: 'dcIn .18s ease-out' }}>
-        <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
           <div>
             <h2 style={{ margin: '0 0 2px' }}>{d.nombre}</h2>
