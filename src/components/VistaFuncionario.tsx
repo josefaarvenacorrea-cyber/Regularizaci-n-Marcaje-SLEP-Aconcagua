@@ -56,11 +56,12 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
             </p>
             <div className="blueprint" style={{ background: 'var(--color-bg)', overflowX: 'auto' }}>
               <i className="corner tl" /><i className="corner tr" /><i className="corner bl" /><i className="corner br" />
-              <table className="table" style={{ width: '100%', minWidth: 780, borderCollapse: 'collapse', fontSize: 13 }}>
+              <table className="table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', padding: '9px 10px', width: 90 }}>Fecha</th>
                     <th style={{ textAlign: 'left', padding: '9px 10px', width: 140 }}>Inconsistencia</th>
+                    <th style={{ textAlign: 'left', padding: '9px 10px', width: 130 }}>Marca registrada</th>
                     <th style={{ textAlign: 'left', padding: '9px 10px', width: 110 }}>Estado</th>
                     <th style={{ textAlign: 'left', padding: '9px 10px' }}>Acción solicitada</th>
                   </tr>
@@ -72,6 +73,10 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
                         {d.fechaFmt}<div className="text-muted" style={{ fontSize: 11 }}>{d.diaSem}</div>
                       </td>
                       <td style={{ padding: '8px 10px', verticalAlign: 'top' }}><span className={`tag ${d.tagClass}`}>{d.tipo}</span></td>
+                      <td style={{ padding: '8px 10px', verticalAlign: 'top', fontVariantNumeric: 'tabular-nums', fontSize: 12.5 }}>
+                        <div>Entrada <strong>{d.marcaEntrada}</strong></div>
+                        <div>Salida <strong>{d.marcaSalida}</strong></div>
+                      </td>
                       <td style={{ padding: '8px 10px', verticalAlign: 'top' }}><span className={`tag ${d.estadoClass}`}>{d.estadoLabel}</span></td>
                       <td style={{ padding: '8px 10px', verticalAlign: 'top' }}>{d.accionSolicitada}</td>
                     </tr>
