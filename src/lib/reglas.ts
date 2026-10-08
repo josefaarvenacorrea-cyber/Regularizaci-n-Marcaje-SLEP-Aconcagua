@@ -215,6 +215,28 @@ export function corregirTipoAtraso(tipo: string, turno: string, entro: string | 
   return salio ? null : 'Falta Salida';
 }
 
+// Minutos de jornada que hay que cumplir ese día para que una salida no sea
+// anticipada: 9 horas de lunes a jueves, 8 horas el viernes.
+function minutosJornada(fecha: string): number {
+  const d = new Date(fecha + 'T00:00:00');
+  return d.getDay() === 5 ? 8 * 60 : 9 * 60;
+}
+
+// Reclasifica un caso "Salida Anticipada" cuya salida en realidad sí alcanza
+// a cubrir la jornada del día (9 horas de lunes a jueves, 8 el viernes)
+// contadas desde la hora real de entrada — no era una salida anticipada
+// real. Devuelve: undefined (no corresponde tocar este caso, sigue siendo
+// una salida anticipada real) o null (no es una inconsistencia real, debe
+// eliminarse).
+export function corregirTipoSalidaAnticipada(tipo: string, fecha: string, entro: string | null, salio: string | null): null | undefined {
+  if (!esSalidaAnticipada(tipo)) return undefined;
+  const entroMin = aMinutos(entro);
+  const salioMin = aMinutos(salio);
+  if (entroMin === null || salioMin === null) return undefined;
+  if (salioMin < entroMin + minutosJornada(fecha)) return undefined; // salida anticipada real, no cambia
+  return null;
+}
+
 export type CasoEstado = {
   tipo: string;
   motivo: string;

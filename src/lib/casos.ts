@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta, corregirTipoAtraso, corregirTipoFalta, grupo, pide } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso, corregirTipoFalta, corregirTipoSalidaAnticipada, grupo, pide } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
@@ -353,6 +353,11 @@ export async function actualizarBase(
       // inverso: un día sin ninguna marca que el reloj control etiquetó como
       // "Falta Entrada" o "Falta Salida" en vez de ausencia completa.
       tipo = corregirTipoFalta(tipo, r.entro, r.salio) ?? tipo;
+      // Y para "Salida Anticipada": un día donde la salida en realidad sí
+      // alcanza a cubrir la jornada (9 horas de lunes a jueves, 8 el
+      // viernes) contada desde la entrada real — no era una salida
+      // anticipada real.
+      if (corregirTipoSalidaAnticipada(tipo, r.fecha, r.entro, r.salio) === null) continue;
 
       const clave = claveCaso(r.rut, r.fecha, tipo);
       const d = dotByRut.get(r.rut);
@@ -454,6 +459,26 @@ export async function corregirClasificacionFaltaExistente(): Promise<ResultadoCo
     reclasificados++;
   }
   return { reclasificados };
+}
+
+export type ResultadoCorreccionSalidaAnticipada = { eliminados: number };
+
+// Corrección de una vez para los casos "Salida Anticipada" ya cargados cuya
+// salida en realidad sí alcanza a cubrir la jornada del día (9 horas de
+// lunes a jueves, 8 el viernes) contada desde la entrada real — no eran
+// salidas anticipadas reales. Las cargas nuevas ya se corrigen solas en
+// actualizarBase; esto es solo para lo que ya estaba mal cargado antes de
+// ese cambio. Solo toca casos pendientes: uno ya enviado se deja tal cual,
+// para no invalidar de golpe algo que la jefatura ya regularizó y notificó.
+export async function corregirClasificacionSalidaAnticipadaExistente(): Promise<ResultadoCorreccionSalidaAnticipada> {
+  const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE confirmada = false AND tipo = 'Salida Anticipada'`);
+  let eliminados = 0;
+  for (const r of rows) {
+    if (corregirTipoSalidaAnticipada(r.tipo, r.fecha, r.entro, r.salio) !== null) continue;
+    await execute('DELETE FROM inconsistencias WHERE id = $1', [r.id]);
+    eliminados++;
+  }
+  return { eliminados };
 }
 
 export type ResultadoRegularizacionMasiva = { afectados: number };
