@@ -22,10 +22,14 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: st
         <h6 className="text-muted" style={{ margin: '0 0 10px' }}>Regularización de marcajes</h6>
         <h1 style={{ fontSize: 40, margin: '0 0 12px', maxWidth: '22ch' }}>Justifique las inconsistencias de marcaje de su equipo</h1>
         <p className="text-muted" style={{ fontSize: 15, maxWidth: '52ch' }}>
-          Ingrese con su correo institucional y su contraseña (los primeros 4 dígitos de su RUT). Si tiene funcionarios a
-          cargo verá los casos de su equipo según la dotación efectiva vigente; si no, verá sus propias inconsistencias.
+          Ingrese con su correo institucional y su contraseña. Si tiene funcionarios a cargo verá los casos de su equipo
+          según la dotación efectiva vigente; si no, verá sus propias inconsistencias.
         </p>
-        <div className="field" style={{ marginTop: 24, maxWidth: 400 }}>
+        <div style={{ background: 'var(--color-accent-100)', color: 'var(--color-accent-800)', fontSize: 13, padding: '10px 14px', maxWidth: 400, marginTop: 20 }}>
+          <strong>¿Es su primera vez?</strong> Su contraseña temporal son los primeros 4 dígitos de su RUT. Al ingresar, el
+          sistema le pedirá cambiarla — esa será su contraseña de ahí en más.
+        </div>
+        <div className="field" style={{ marginTop: 16, maxWidth: 400 }}>
           <label>Correo institucional</label>
           <input
             className="input"
@@ -41,7 +45,7 @@ export function LoginScreen({ onEntrar }: { onEntrar: (correo: string, clave: st
           <input
             className="input"
             type="password"
-            placeholder="Primeros 4 dígitos de su RUT"
+            placeholder="Contraseña"
             value={clave}
             onChange={(e) => setClave(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && entrar(correo, clave)}
