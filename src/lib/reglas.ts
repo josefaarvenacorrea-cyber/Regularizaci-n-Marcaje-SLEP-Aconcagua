@@ -117,6 +117,14 @@ export function grupo(tipo: string): 'falta' | 'atraso' | 'inasistencia' {
   return 'inasistencia';
 }
 
+// Dentro del grupo "atraso" hay dos problemas distintos: llegar después de
+// las 09:30 (Atraso) o irse antes de cumplir la jornada del día — 9 horas de
+// lunes a jueves, 8 el viernes — (Salida Anticipada). Comparten catálogo de
+// motivos, pero cada uno pide justificar la hora real contraria.
+export function esSalidaAnticipada(tipo: string): boolean {
+  return /anticipada|adelanto/.test(key(tipo));
+}
+
 export function motivosDe(tipo: string): Motivo[] {
   return CATALOGO[grupo(tipo)];
 }
@@ -160,7 +168,7 @@ export function pide(tipo: string): { e: boolean; s: boolean } {
   const t = key(tipo);
   if (/falta entrada/.test(t)) return { e: true, s: false };
   if (/falta salida/.test(t)) return { e: false, s: true };
-  if (grupo(tipo) === 'atraso') return { e: true, s: false };
+  if (grupo(tipo) === 'atraso') return esSalidaAnticipada(tipo) ? { e: false, s: true } : { e: true, s: false };
   return { e: true, s: true };
 }
 
@@ -232,7 +240,9 @@ export function accionSolicitada(c: { tipo: string; motivo: string; confirmada: 
     return 'Informe a su jefatura, por conducto interno, la hora real de salida de ese día.';
   }
   if (g === 'atraso') {
-    return 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.';
+    return esSalidaAnticipada(c.tipo)
+      ? 'Informe a su jefatura, por conducto interno, la hora real de salida de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.'
+      : 'Informe a su jefatura, por conducto interno, la hora real de entrada de ese día, o si corresponde a un permiso, remita el respaldo correspondiente.';
   }
   return 'Si tiene un permiso, licencia médica u otro respaldo para esa fecha, entréguelo a su jefatura para que lo regularice.';
 }
@@ -260,7 +270,7 @@ export function completa(c: CasoEstado, horaSoloOlvido: boolean): boolean {
 export function tagClass(tipo: string): string {
   const t = key(tipo);
   if (/injustificada|inasistencia/.test(t)) return 'tag-neutral';
-  if (/atraso|adelanto/.test(t)) return 'tag-outline';
+  if (/atraso|adelanto|anticipada/.test(t)) return 'tag-outline';
   return 'tag-accent';
 }
 
