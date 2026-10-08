@@ -40,7 +40,7 @@ export function Header({
     <>
       <header className="nav" style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '14px 32px', borderBottom: '1px solid var(--color-divider)', background: 'var(--color-bg)', position: 'sticky', top: 0, zIndex: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 28, width: 'auto' }} />
+          <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 40, width: 'auto' }} />
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
             <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 19, letterSpacing: '-0.01em' }}>Regularización de Marcajes</span>
             <span className="text-muted" style={{ fontSize: 11, letterSpacing: '.09em', textTransform: 'uppercase' }}>SLEP Aconcagua</span>

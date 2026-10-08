@@ -27,7 +27,7 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
     <div style={{ minHeight: '100vh', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 32px', borderBottom: '1px solid var(--color-divider)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 28, width: 'auto' }} />
+          <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 40, width: 'auto' }} />
           <div>
             <div style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: 18 }}>Regularización de Marcajes</div>
             <div className="text-muted" style={{ fontSize: 12 }}>{session.nombre}</div>
@@ -89,6 +89,14 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
           </>
         )}
       </main>
+
+      <footer style={{ borderTop: '1px solid var(--color-divider)', padding: '18px 32px', marginTop: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 22, width: 'auto' }} />
+        <span className="text-muted" style={{ fontSize: 12 }}>
+          ¿Tiene alguna duda? Escriba a{' '}
+          <a href="mailto:administracion.personas@slepaconcagua.gob.cl">administracion.personas@slepaconcagua.gob.cl</a>
+        </span>
+      </footer>
     </div>
   );
 }

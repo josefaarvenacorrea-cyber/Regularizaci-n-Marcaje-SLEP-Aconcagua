@@ -423,6 +423,14 @@ export function Workspace() {
       {histRut && histItems && (
         <HistorialDrawer rut={histRut} items={histItems} onClose={() => setHistRut(null)} />
       )}
+
+      <footer style={{ borderTop: '1px solid var(--color-divider)', padding: '18px 32px', marginTop: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <img src="/slep-mark.webp" alt="SLEP Aconcagua" style={{ height: 22, width: 'auto' }} />
+        <span className="text-muted" style={{ fontSize: 12 }}>
+          ¿Tiene alguna duda? Escriba a{' '}
+          <a href="mailto:administracion.personas@slepaconcagua.gob.cl">administracion.personas@slepaconcagua.gob.cl</a>
+        </span>
+      </footer>
     </div>
   );
 }
