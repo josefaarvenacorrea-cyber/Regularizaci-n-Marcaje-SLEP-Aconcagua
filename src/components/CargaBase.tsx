@@ -69,6 +69,67 @@ function TarjetaCarga({
   );
 }
 
+type ResultadoVerificacion = {
+  atraso: { reclasificados: number; eliminados: number };
+  falta: { reclasificados: number };
+  salidaAnticipada: { eliminados: number };
+};
+
+function VerificarClasificacion({ onCorregido }: { onCorregido: () => void }) {
+  const [resultado, setResultado] = useState<ResultadoVerificacion | null>(null);
+  const [error, setError] = useState('');
+  const [verificando, setVerificando] = useState(false);
+
+  async function verificar() {
+    setVerificando(true);
+    setError('');
+    setResultado(null);
+    try {
+      const r = await api.post<ResultadoVerificacion>('/api/admin/verificar-clasificacion');
+      setResultado(r);
+      onCorregido();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo verificar la clasificación.');
+    } finally {
+      setVerificando(false);
+    }
+  }
+
+  const totalCorregidos =
+    resultado &&
+    resultado.atraso.reclasificados + resultado.atraso.eliminados + resultado.falta.reclasificados + resultado.salidaAnticipada.eliminados;
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-bg)', marginTop: 26 }}>
+      <h6 style={{ margin: '0 0 6px' }}>Verificar clasificación de todas las inconsistencias</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
+        Revisa de una vez los casos pendientes ya cargados contra las tres reglas de clasificación conocidas: Atraso
+        fuera del margen de tolerancia del turno, Falta Entrada/Salida sin ninguna marca ese día, y Salida Anticipada
+        que en realidad sí cumplió su jornada (9 horas de lunes a jueves, 8 el viernes). Corrige lo que encuentre mal
+        clasificado. No toca casos que la jefatura ya haya enviado.
+      </p>
+      <button type="button" className="btn btn-primary" onClick={verificar} disabled={verificando}>
+        {verificando ? 'Verificando…' : 'Verificar y corregir clasificación'}
+      </button>
+      {error && <div style={{ fontSize: 12, color: 'var(--color-accent-700)', marginTop: 8 }}>{error}</div>}
+      {resultado && (
+        <div style={{ fontSize: 12.5, marginTop: 10, lineHeight: 1.7 }}>
+          {totalCorregidos ? (
+            <>
+              <div><strong>{totalCorregidos}</strong> casos corregidos en total:</div>
+              <div>· Atraso: {resultado.atraso.reclasificados} reclasificados a Falta Salida, {resultado.atraso.eliminados} eliminados.</div>
+              <div>· Falta Entrada/Salida: {resultado.falta.reclasificados} reclasificados a Inasistencia Injustificada.</div>
+              <div>· Salida Anticipada: {resultado.salidaAnticipada.eliminados} eliminados por cumplir su jornada.</div>
+            </>
+          ) : (
+            'No se encontró ningún caso mal clasificado.'
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
   const [mensaje, setMensaje] = useState('');
   const [corrigiendo, setCorrigiendo] = useState(false);
@@ -93,10 +154,10 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
       <h6 style={{ margin: '0 0 6px' }}>Corrección: Atraso mal clasificado</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
-        Corrige de una vez los casos &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro del margen de tolerancia del
-        turno (no eran atrasos reales) — los reclasifica a &ldquo;Falta Salida&rdquo; si falta esa marca, o los elimina si el día no
-        tiene ninguna inconsistencia real. Las cargas nuevas ya se corrigen solas; esto es solo para lo que ya estaba mal
-        cargado antes de ese cambio.
+        Corrige de una vez los casos pendientes &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro del margen de
+        tolerancia del turno (no eran atrasos reales) — los reclasifica a &ldquo;Falta Salida&rdquo; si falta esa marca, o los elimina
+        si el día no tiene ninguna inconsistencia real. No toca casos que la jefatura ya haya enviado. Las cargas nuevas
+        ya se corrigen solas; esto es solo para lo que ya estaba mal cargado antes de ese cambio.
       </p>
       <button type="button" className="btn btn-secondary" onClick={corregir} disabled={corrigiendo}>
         {corrigiendo ? 'Corrigiendo…' : 'Corregir clasificación de Atraso'}
@@ -592,6 +653,7 @@ export function CargaBase({
         Los casos sin jefatura o con RUT ausente de la dotación no se asignan a nadie: corrija la columna <em>Jefatura</em> de la dotación o el RUT del reloj control y vuelva a cargar la base.
       </p>
 
+      <VerificarClasificacion onCorregido={onCargada} />
       <CorreccionAtraso onCorregido={onCargada} />
       <CorreccionFalta onCorregido={onCargada} />
       <CorreccionSalidaAnticipada onCorregido={onCargada} />

@@ -420,9 +420,11 @@ export type ResultadoCorreccionAtraso = { reclasificados: number; eliminados: nu
 // Corrección de una vez para los casos "Atraso" que ya están cargados desde
 // antes de que `actualizarBase` aplicara `corregirTipoAtraso` en la carga
 // misma (ver ahí el porqué). No usa la clave de negocio de actualizarBase
-// porque acá se actualiza directo por id, sobre filas que ya existen.
+// porque acá se actualiza directo por id, sobre filas que ya existen. Solo
+// toca casos pendientes: uno ya enviado se deja tal cual, para no invalidar
+// de golpe algo que la jefatura ya regularizó y notificó.
 export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoCorreccionAtraso> {
-  const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE tipo = 'Atraso'`);
+  const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE confirmada = false AND tipo = 'Atraso'`);
   const now = new Date().toISOString();
   let reclasificados = 0;
   let eliminados = 0;
@@ -479,6 +481,25 @@ export async function corregirClasificacionSalidaAnticipadaExistente(): Promise<
     eliminados++;
   }
   return { eliminados };
+}
+
+export type ResultadoVerificacion = {
+  atraso: ResultadoCorreccionAtraso;
+  falta: ResultadoCorreccionFalta;
+  salidaAnticipada: ResultadoCorreccionSalidaAnticipada;
+};
+
+// Verificación de clasificación de una vez: corre las tres correcciones de
+// casos pendientes ya cargados (Atraso fuera de tolerancia del turno, Falta
+// Entrada/Salida sin ninguna marca ese día, Salida Anticipada que en
+// realidad sí cumplió su jornada) y devuelve un resumen combinado. Pensado
+// como un solo botón para auditar toda la base recién cargada, en vez de
+// tener que correr las tres por separado.
+export async function verificarClasificacionExistente(): Promise<ResultadoVerificacion> {
+  const atraso = await corregirClasificacionAtrasoExistente();
+  const falta = await corregirClasificacionFaltaExistente();
+  const salidaAnticipada = await corregirClasificacionSalidaAnticipadaExistente();
+  return { atraso, falta, salidaAnticipada };
 }
 
 export type ResultadoRegularizacionMasiva = { afectados: number };
