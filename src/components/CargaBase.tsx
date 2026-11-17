@@ -308,6 +308,70 @@ function RegularizacionMasiva({ onRegularizado }: { onRegularizado: () => void }
   );
 }
 
+function EliminarPendientes({ onCorregido }: { onCorregido: () => void }) {
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
+  const [mensaje, setMensaje] = useState('');
+  const [eliminando, setEliminando] = useState(false);
+
+  async function eliminar() {
+    if (!fechaDesde || !fechaHasta) {
+      setMensaje('Complete ambas fechas.');
+      return;
+    }
+    const ok = window.confirm(
+      'Esto va a ELIMINAR PERMANENTEMENTE todos los casos pendientes (sin regularizar) entre el ' +
+        fechaDesde +
+        ' y el ' +
+        fechaHasta +
+        '. Los casos que una jefatura ya haya regularizado y confirmado en ese rango NO se tocan y se conservan. Esta acción no se puede deshacer. ¿Confirma?'
+    );
+    if (!ok) return;
+    setEliminando(true);
+    setMensaje('');
+    try {
+      const r = await api.post<{ eliminados: number }>('/api/admin/eliminar-pendientes', { fechaDesde, fechaHasta });
+      setMensaje(r.eliminados + ' casos pendientes eliminados entre ' + fechaDesde + ' y ' + fechaHasta + '.');
+      onCorregido();
+    } catch (e) {
+      setMensaje(e instanceof Error ? e.message : 'No se pudo eliminar.');
+    } finally {
+      setEliminando(false);
+    }
+  }
+
+  return (
+    <div className="blueprint" style={{ padding: 18, background: 'var(--color-red-100)', marginTop: 26, borderColor: 'var(--color-red-500)' }}>
+      <h6 style={{ margin: '0 0 6px', color: 'var(--color-red-900)' }}>Eliminar pendientes de un rango de fechas</h6>
+      <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
+        Para deshacer una carga completa (p. ej. si la base subida tenía un error). Elimina permanentemente todos los
+        casos <strong>pendientes</strong> (sin regularizar) del rango indicado. Los casos que una jefatura ya haya
+        regularizado y confirmado en ese rango no se tocan — ese trabajo se conserva siempre.
+      </p>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+        <label style={{ fontSize: 12.5 }}>
+          Desde
+          <input type="date" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <label style={{ fontSize: 12.5 }}>
+          Hasta
+          <input type="date" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} style={{ display: 'block', marginTop: 4 }} />
+        </label>
+        <button
+          type="button"
+          className="btn"
+          style={{ background: 'var(--color-red-700)', color: '#fff', borderColor: 'var(--color-red-700)' }}
+          onClick={eliminar}
+          disabled={eliminando}
+        >
+          {eliminando ? 'Eliminando…' : 'Eliminar pendientes del rango'}
+        </button>
+      </div>
+      {mensaje && <div style={{ fontSize: 12, color: 'var(--color-red-900)', marginTop: 10 }}>{mensaje}</div>}
+    </div>
+  );
+}
+
 function CorreccionIngreso({ onCorregido }: { onCorregido: () => void }) {
   const [rut, setRut] = useState('');
   const [fechaIngreso, setFechaIngreso] = useState('');
@@ -662,6 +726,7 @@ export function CargaBase({
       <RegularizacionExitosa onRegularizado={onCargada} />
       <AsistenciaPersona />
       <RestablecerClave />
+      <EliminarPendientes onCorregido={onCargada} />
     </main>
   );
 }

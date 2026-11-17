@@ -502,6 +502,21 @@ export async function verificarClasificacionExistente(): Promise<ResultadoVerifi
   return { atraso, falta, salidaAnticipada };
 }
 
+export type ResultadoEliminarPendientes = { eliminados: number };
+
+// Elimina de una vez los casos pendientes (sin regularizar) de un rango de
+// fechas — pensado para deshacer una carga completa (p. ej. si la base
+// subida tenía un error y hay que rehacerla desde cero). Nunca toca un caso
+// que la jefatura ya haya regularizado y confirmado: ese trabajo se
+// conserva siempre, aunque la fecha esté dentro del rango.
+export async function eliminarPendientesPorRangoFecha(fechaDesde: string, fechaHasta: string): Promise<ResultadoEliminarPendientes> {
+  const eliminados = await execute(
+    'DELETE FROM inconsistencias WHERE confirmada = false AND fecha >= $1 AND fecha <= $2',
+    [fechaDesde, fechaHasta]
+  );
+  return { eliminados };
+}
+
 export type ResultadoRegularizacionMasiva = { afectados: number };
 
 // Regulariza en bloque todos los casos pendientes de una fecha con el mismo
