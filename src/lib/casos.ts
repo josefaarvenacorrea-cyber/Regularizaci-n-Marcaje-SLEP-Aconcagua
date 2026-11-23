@@ -1,5 +1,5 @@
 import { execute, query, queryOne, withTransaction } from './db';
-import { key, normRut, completa as calcCompleta, corregirTipoAtraso, corregirTipoFalta, corregirTipoSalidaAnticipada, grupo, pide } from './reglas';
+import { key, normRut, completa as calcCompleta, corregirTipoAtraso, corregirTipoFalta, corregirTipoSalidaAnticipada, recuperarAtrasoMalReclasificado, grupo, pide } from './reglas';
 import type { Session } from './auth';
 import type { PoolClient } from 'pg';
 
@@ -343,10 +343,11 @@ export async function actualizarBase(
 
     for (const r of registros) {
       // El "Observado" del reloj control a veces marca Atraso en días donde
-      // la entrada en realidad cayó dentro del margen de tolerancia del
-      // turno — no era un atraso real. Se corrige acá, antes de calcular la
-      // clave de negocio, para que quede bien clasificado desde la carga.
-      const tipoCorregido = corregirTipoAtraso(r.tipo, r.turno, r.entro, r.salio);
+      // la entrada en realidad cayó dentro de la ventana de entrada fija
+      // (07:30–09:30) — no era un atraso real. Se corrige acá, antes de
+      // calcular la clave de negocio, para que quede bien clasificado desde
+      // la carga.
+      const tipoCorregido = corregirTipoAtraso(r.tipo, r.entro, r.salio);
       if (tipoCorregido === null) continue; // no es una inconsistencia real
       let tipo = tipoCorregido ?? r.tipo;
       // Igual que la corrección de Atraso de arriba, pero para el caso
@@ -415,7 +416,7 @@ export async function actualizarBase(
   };
 }
 
-export type ResultadoCorreccionAtraso = { reclasificados: number; eliminados: number };
+export type ResultadoCorreccionAtraso = { reclasificados: number; eliminados: number; recuperados: number };
 
 // Corrección de una vez para los casos "Atraso" que ya están cargados desde
 // antes de que `actualizarBase` aplicara `corregirTipoAtraso` en la carga
@@ -423,13 +424,18 @@ export type ResultadoCorreccionAtraso = { reclasificados: number; eliminados: nu
 // porque acá se actualiza directo por id, sobre filas que ya existen. Solo
 // toca casos pendientes: uno ya enviado se deja tal cual, para no invalidar
 // de golpe algo que la jefatura ya regularizó y notificó.
+//
+// También recupera, en el mismo paso, los casos "Falta Salida" que una
+// versión anterior de esta corrección reclasificó mal desde "Atraso" (ver
+// `recuperarAtrasoMalReclasificado`): esa versión calculaba la ventana de
+// entrada a partir del turno en vez de usar la ventana fija 07:30–09:30.
 export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoCorreccionAtraso> {
   const rows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE confirmada = false AND tipo = 'Atraso'`);
   const now = new Date().toISOString();
   let reclasificados = 0;
   let eliminados = 0;
   for (const r of rows) {
-    const resultado = corregirTipoAtraso(r.tipo, r.turno, r.entro, r.salio);
+    const resultado = corregirTipoAtraso(r.tipo, r.entro, r.salio);
     if (resultado === undefined) continue;
     if (resultado === null) {
       await execute('DELETE FROM inconsistencias WHERE id = $1', [r.id]);
@@ -439,7 +445,17 @@ export async function corregirClasificacionAtrasoExistente(): Promise<ResultadoC
       reclasificados++;
     }
   }
-  return { reclasificados, eliminados };
+
+  const faltaRows = await query<IncRow>(`SELECT * FROM inconsistencias WHERE confirmada = false AND tipo = 'Falta Salida' AND salio IS NULL`);
+  let recuperados = 0;
+  for (const r of faltaRows) {
+    const resultado = recuperarAtrasoMalReclasificado(r.tipo, r.turno, r.entro, r.salio);
+    if (!resultado) continue;
+    await execute('UPDATE inconsistencias SET tipo = $1, updated_at = $2 WHERE id = $3', [resultado, now, r.id]);
+    recuperados++;
+  }
+
+  return { reclasificados, eliminados, recuperados };
 }
 
 export type ResultadoCorreccionFalta = { reclasificados: number };
@@ -490,8 +506,8 @@ export type ResultadoVerificacion = {
 };
 
 // Verificación de clasificación de una vez: corre las tres correcciones de
-// casos pendientes ya cargados (Atraso fuera de tolerancia del turno, Falta
-// Entrada/Salida sin ninguna marca ese día, Salida Anticipada que en
+// casos pendientes ya cargados (Atraso fuera de la ventana de entrada fija,
+// Falta Entrada/Salida sin ninguna marca ese día, Salida Anticipada que en
 // realidad sí cumplió su jornada) y devuelve un resumen combinado. Pensado
 // como un solo botón para auditar toda la base recién cargada, en vez de
 // tener que correr las tres por separado.

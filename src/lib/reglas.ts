@@ -172,15 +172,11 @@ export function pide(tipo: string): { e: boolean; s: boolean } {
   return { e: true, s: true };
 }
 
-// El turno trae su propio margen de tolerancia en el texto, ej. "BH - 09:00
-// hrs. (60 mins)" → no es atraso si entra antes de las 10:00. Devuelve null
-// si el turno no viene en ese formato o no hay hora de entrada (no se puede
-// evaluar).
-function toleranciaDeTurno(turno: string): { inicioMin: number; tolMin: number } | null {
-  const m = String(turno || '').match(/(\d{1,2}):(\d{2})\s*hrs.*?\((\d+)\s*mins?\)/);
-  if (!m) return null;
-  return { inicioMin: parseInt(m[1], 10) * 60 + parseInt(m[2], 10), tolMin: parseInt(m[3], 10) };
-}
+// La ventana de entrada es fija e institucional — 07:30 a 09:30 — sin
+// importar el turno. Los minutos entre paréntesis en el texto del turno
+// (ej. "BH - 09:00 hrs. (60 mins)") no son una tolerancia de atraso, así
+// que no se usan acá. Entrar a las 09:31 o después ya es atraso.
+const VENTANA_ENTRADA_FIN_MIN = 9 * 60 + 30;
 
 function aMinutos(hora: string | null | undefined): number | null {
   const m = String(hora || '').match(/^(\d{1,2}):(\d{2})$/);
@@ -200,19 +196,44 @@ export function corregirTipoFalta(tipo: string, entro: string | null, salio: str
   return 'Inasistencia Injustificada';
 }
 
-// Reclasifica un caso "Atraso" cuya entrada en realidad cae dentro del
-// margen de tolerancia del turno — no es un atraso real. Si además falta la
-// marca de salida, el problema real de ese día es "Falta Salida". Si la
-// salida también está marcada, ese día no tiene ninguna inconsistencia.
+// Reclasifica un caso "Atraso" cuya entrada en realidad cae dentro de la
+// ventana de entrada fija (07:30–09:30) — no es un atraso real. Si además
+// falta la marca de salida, el problema real de ese día es "Falta Salida".
+// Si la salida también está marcada, ese día no tiene ninguna inconsistencia.
 // Devuelve: undefined (no corresponde tocar este caso), null (no es una
 // inconsistencia real, debe eliminarse) o el tipo corregido.
-export function corregirTipoAtraso(tipo: string, turno: string, entro: string | null, salio: string | null): string | null | undefined {
+export function corregirTipoAtraso(tipo: string, entro: string | null, salio: string | null): string | null | undefined {
   if (key(tipo) !== 'atraso') return undefined;
-  const tol = toleranciaDeTurno(turno);
   const entroMin = aMinutos(entro);
-  if (!tol || entroMin === null) return undefined;
-  if (entroMin > tol.inicioMin + tol.tolMin) return undefined; // atraso real, no cambia
+  if (entroMin === null) return undefined;
+  if (entroMin > VENTANA_ENTRADA_FIN_MIN) return undefined; // atraso real, no cambia
   return salio ? null : 'Falta Salida';
+}
+
+// Fórmula que usaba antes `corregirTipoAtraso` para la ventana de entrada —
+// "no es atraso si entra antes de inicio del turno + minutos entre
+// paréntesis" (ej. "BH - 09:00 hrs. (60 mins)" → antes de las 10:00). Era
+// incorrecta: la ventana real es fija (07:30–09:30), no depende del turno.
+// Se conserva solo para `recuperarAtrasoMalReclasificado`, que identifica
+// los casos que esa versión anterior alcanzó a tocar mal.
+function umbralAtrasoAnteriorBuggy(turno: string): number | null {
+  const m = String(turno || '').match(/(\d{1,2}):(\d{2})\s*hrs.*?\((\d+)\s*mins?\)/);
+  if (!m) return null;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + parseInt(m[3], 10);
+}
+
+// Recuperación de una vez: un caso "Falta Salida" sin marca de salida cuya
+// entrada SÍ es un atraso real bajo la ventana fija (07:30–09:30), pero que
+// la versión anterior (con la fórmula de arriba) dejó pasar por error y
+// reclasificó de "Atraso" a "Falta Salida". Devuelve 'Atraso' si corresponde
+// recuperarlo, undefined si no.
+export function recuperarAtrasoMalReclasificado(tipo: string, turno: string, entro: string | null, salio: string | null): 'Atraso' | undefined {
+  if (key(tipo) !== 'falta salida' || salio) return undefined;
+  const entroMin = aMinutos(entro);
+  if (entroMin === null || entroMin <= VENTANA_ENTRADA_FIN_MIN) return undefined;
+  const umbralAnterior = umbralAtrasoAnteriorBuggy(turno);
+  if (umbralAnterior === null || entroMin > umbralAnterior) return undefined;
+  return 'Atraso';
 }
 
 // Minutos de jornada que hay que cumplir ese día para que una salida no sea

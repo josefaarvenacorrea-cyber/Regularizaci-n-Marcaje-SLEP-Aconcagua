@@ -70,7 +70,7 @@ function TarjetaCarga({
 }
 
 type ResultadoVerificacion = {
-  atraso: { reclasificados: number; eliminados: number };
+  atraso: { reclasificados: number; eliminados: number; recuperados: number };
   falta: { reclasificados: number };
   salidaAnticipada: { eliminados: number };
 };
@@ -97,16 +97,20 @@ function VerificarClasificacion({ onCorregido }: { onCorregido: () => void }) {
 
   const totalCorregidos =
     resultado &&
-    resultado.atraso.reclasificados + resultado.atraso.eliminados + resultado.falta.reclasificados + resultado.salidaAnticipada.eliminados;
+    resultado.atraso.reclasificados +
+      resultado.atraso.eliminados +
+      resultado.atraso.recuperados +
+      resultado.falta.reclasificados +
+      resultado.salidaAnticipada.eliminados;
 
   return (
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-bg)', marginTop: 26 }}>
       <h6 style={{ margin: '0 0 6px' }}>Verificar clasificación de todas las inconsistencias</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
         Revisa de una vez los casos pendientes ya cargados contra las tres reglas de clasificación conocidas: Atraso
-        fuera del margen de tolerancia del turno, Falta Entrada/Salida sin ninguna marca ese día, y Salida Anticipada
-        que en realidad sí cumplió su jornada (9 horas de lunes a jueves, 8 el viernes). Corrige lo que encuentre mal
-        clasificado. No toca casos que la jefatura ya haya enviado.
+        fuera de la ventana de entrada fija (07:30–09:30), Falta Entrada/Salida sin ninguna marca ese día, y Salida
+        Anticipada que en realidad sí cumplió su jornada (9 horas de lunes a jueves, 8 el viernes). Corrige lo que
+        encuentre mal clasificado. No toca casos que la jefatura ya haya enviado.
       </p>
       <button type="button" className="btn btn-primary" onClick={verificar} disabled={verificando}>
         {verificando ? 'Verificando…' : 'Verificar y corregir clasificación'}
@@ -117,7 +121,7 @@ function VerificarClasificacion({ onCorregido }: { onCorregido: () => void }) {
           {totalCorregidos ? (
             <>
               <div><strong>{totalCorregidos}</strong> casos corregidos en total:</div>
-              <div>· Atraso: {resultado.atraso.reclasificados} reclasificados a Falta Salida, {resultado.atraso.eliminados} eliminados.</div>
+              <div>· Atraso: {resultado.atraso.reclasificados} reclasificados a Falta Salida, {resultado.atraso.eliminados} eliminados, {resultado.atraso.recuperados} recuperados desde Falta Salida.</div>
               <div>· Falta Entrada/Salida: {resultado.falta.reclasificados} reclasificados a Inasistencia Injustificada.</div>
               <div>· Salida Anticipada: {resultado.salidaAnticipada.eliminados} eliminados por cumplir su jornada.</div>
             </>
@@ -138,9 +142,14 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
     setCorrigiendo(true);
     setMensaje('');
     try {
-      const r = await api.post<{ reclasificados: number; eliminados: number }>('/api/admin/corregir-atraso');
+      const r = await api.post<{ reclasificados: number; eliminados: number; recuperados: number }>('/api/admin/corregir-atraso');
       setMensaje(
-        r.reclasificados + ' casos reclasificados de Atraso a Falta Salida, ' + r.eliminados + ' eliminados por no ser una inconsistencia real.'
+        r.reclasificados +
+          ' casos reclasificados de Atraso a Falta Salida, ' +
+          r.eliminados +
+          ' eliminados por no ser una inconsistencia real, ' +
+          r.recuperados +
+          ' recuperados de vuelta a Atraso desde Falta Salida.'
       );
       onCorregido();
     } catch (e) {
@@ -154,10 +163,12 @@ function CorreccionAtraso({ onCorregido }: { onCorregido: () => void }) {
     <div className="blueprint" style={{ padding: 18, background: 'var(--color-neutral-100)', marginTop: 26 }}>
       <h6 style={{ margin: '0 0 6px' }}>Corrección: Atraso mal clasificado</h6>
       <p className="text-muted" style={{ fontSize: 12.5, margin: '0 0 10px', maxWidth: '70ch' }}>
-        Corrige de una vez los casos pendientes &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro del margen de
-        tolerancia del turno (no eran atrasos reales) — los reclasifica a &ldquo;Falta Salida&rdquo; si falta esa marca, o los elimina
-        si el día no tiene ninguna inconsistencia real. No toca casos que la jefatura ya haya enviado. Las cargas nuevas
-        ya se corrigen solas; esto es solo para lo que ya estaba mal cargado antes de ese cambio.
+        Corrige de una vez los casos pendientes &ldquo;Atraso&rdquo; ya cargados cuya entrada en realidad cae dentro de la ventana de
+        entrada fija (07:30–09:30) — no eran atrasos reales — reclasificándolos a &ldquo;Falta Salida&rdquo; si falta esa marca, o
+        eliminándolos si el día no tiene ninguna inconsistencia real. También recupera de vuelta a &ldquo;Atraso&rdquo; los casos
+        &ldquo;Falta Salida&rdquo; que una versión anterior de esta regla reclasificó mal por error. No toca casos que la jefatura ya
+        haya enviado. Las cargas nuevas ya se corrigen solas; esto es solo para lo que ya estaba mal cargado antes de este
+        ajuste.
       </p>
       <button type="button" className="btn btn-secondary" onClick={corregir} disabled={corrigiendo}>
         {corrigiendo ? 'Corrigiendo…' : 'Corregir clasificación de Atraso'}
