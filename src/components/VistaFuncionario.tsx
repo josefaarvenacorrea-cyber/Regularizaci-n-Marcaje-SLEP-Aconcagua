@@ -20,8 +20,12 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
       .catch((e) => setError(e instanceof ApiError ? e.message : 'No se pudieron cargar sus inconsistencias.'));
   }, []);
 
-  const displays = (casos || []).map((c) => ({ c, d: casoDisplay(c, false, false) }));
-  const pendientes = displays.filter((x) => !x.d.confirmada).length;
+  // Una vez que la jefatura regulariza un caso, deja de mostrársele al
+  // funcionario acá — ya no tiene nada que hacer con él, y dejarlo visible
+  // como "Justificada" solo generaba confusión.
+  const displays = (casos || []).map((c) => ({ c, d: casoDisplay(c, false, false) })).filter((x) => !x.d.confirmada);
+  const pendientes = displays.length;
+  const huboCasos = (casos || []).length > 0;
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: 'var(--font-body)', color: 'var(--color-text)' }}>
@@ -48,14 +52,18 @@ export function VistaFuncionario({ session, onSalir }: { session: Session; onSal
           <div style={{ padding: '10px 12px', fontSize: 13, color: 'var(--color-accent-700)', background: 'var(--color-accent-100)' }}>{error}</div>
         )}
         {!error && casos === null && <div className="text-muted" style={{ fontSize: 13 }}>Cargando…</div>}
-        {!error && casos !== null && casos.length === 0 && (
-          <div className="text-muted" style={{ fontSize: 13 }}>No tiene inconsistencias de marcaje registradas en este período.</div>
+        {!error && casos !== null && displays.length === 0 && (
+          <div className="text-muted" style={{ fontSize: 13 }}>
+            {huboCasos
+              ? 'No tiene inconsistencias pendientes. Todas sus inconsistencias de este período ya fueron regularizadas.'
+              : 'No tiene inconsistencias de marcaje registradas en este período.'}
+          </div>
         )}
 
-        {!error && casos !== null && casos.length > 0 && (
+        {!error && casos !== null && displays.length > 0 && (
           <>
             <p className="text-muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
-              {pendientes ? pendientes + (pendientes === 1 ? ' inconsistencia pendiente.' : ' inconsistencias pendientes.') : 'Todas están regularizadas.'}
+              {pendientes + (pendientes === 1 ? ' inconsistencia pendiente.' : ' inconsistencias pendientes.')}
             </p>
             <div className="blueprint" style={{ background: 'var(--color-bg)', overflowX: 'auto' }}>
               <table className="table" style={{ width: '100%', minWidth: 900, borderCollapse: 'collapse', fontSize: 13 }}>
